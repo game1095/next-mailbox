@@ -2,11 +2,12 @@
 
 import "leaflet/dist/leaflet.css";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
-import { LatLngExpression, Map, LatLngBounds } from "leaflet";
+// ✨ แก้ไข: ลบ LatLngBounds ที่ไม่ได้ใช้ออก
+import { LatLngExpression, Map } from "leaflet";
 import L from "leaflet";
 import { useEffect, useRef } from "react";
 
-// Interface สำหรับข้อมูล
+// Interface
 interface Mailbox {
   id: number;
   postOffice: string;
@@ -16,10 +17,10 @@ interface Mailbox {
 }
 
 interface MailboxMapProps {
-  mailboxes: Mailbox[]; // ✨ รับข้อมูลเป็น Array
+  mailboxes: Mailbox[];
 }
 
-// ไอคอนหมุดสีแดงขนาดเล็ก
+// Icon
 const smallRedIcon = new L.Icon({
   iconUrl:
     "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
@@ -36,26 +37,23 @@ const MailboxMap = ({ mailboxes }: MailboxMapProps) => {
   const defaultPosition: LatLngExpression = [15.7, 100.12];
   const defaultZoom = 8;
 
-  // ✨ Effect สำหรับปรับมุมกล้องอัตโนมัติ ✨
+  // ✨ แก้ไข: เพิ่ม defaultPosition และ defaultZoom ใน dependency array ✨
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
     if (mailboxes && mailboxes.length > 0) {
-      // สร้างขอบเขตจากพิกัดทั้งหมดที่เลือก
       const bounds = new L.LatLngBounds(
         mailboxes.map((m) => [
           parseFloat(m.lat as string),
           parseFloat(m.lng as string),
         ])
       );
-      // เลื่อนแผนที่ให้แสดงทุกหมุดพอดีขอบเขต
-      map.flyToBounds(bounds, { padding: [50, 50] }); // padding เพื่อไม่ให้หมุดชิดขอบจอเกินไป
+      map.flyToBounds(bounds, { padding: [50, 50] });
     } else {
-      // ถ้าไม่มีอะไรถูกเลือก ให้กลับไปที่มุมมองเริ่มต้น
       map.flyTo(defaultPosition, defaultZoom);
     }
-  }, [mailboxes]); // Effect นี้จะทำงานทุกครั้งที่ `mailboxes` มีการเปลี่ยนแปลง
+  }, [mailboxes, defaultPosition, defaultZoom]);
 
   return (
     <MapContainer
@@ -69,8 +67,6 @@ const MailboxMap = ({ mailboxes }: MailboxMapProps) => {
         attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-
-      {/* วน Loop แสดง Marker ทั้งหมดที่ถูกส่งเข้ามา */}
       {mailboxes.map((marker) => (
         <Marker
           key={marker.id}

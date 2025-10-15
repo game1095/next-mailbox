@@ -23,6 +23,7 @@ import {
   BarChart2,
   Camera,
   CalendarDays,
+  CheckCircle,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { Bar, Pie } from "react-chartjs-2";
@@ -123,25 +124,20 @@ const createDummyData = () => {
     "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Cline x1='12' y1='8' x2='12' y2='16'%3E%3C/cline%3E%3Cline x1='8' y1='12' x2='16' y2='12'%3E%3C/cline%3E%3C/svg%3E";
   const defaultAfterImage =
     "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M22 11.08V12a10 10 0 1 1-5.93-8.87'%3E%3C/path%3E%3Cpolyline points='22 4 12 14.01 9 11.01'%3E%3C/polyline%3E%3C/svg%3E";
-
   const today = new Date();
   for (let i = 1; i <= 30; i++) {
     const po =
       postOfficeData[Math.floor(Math.random() * postOfficeData.length)];
     const landmark = landmarks[Math.floor(Math.random() * landmarks.length)];
     const cleaningHistory: CleaningRecord[] = [];
-
     const recentDate = new Date(today);
     recentDate.setDate(today.getDate() - (Math.floor(Math.random() * 89) + 1));
-
     const oldDate = new Date(today);
     oldDate.setDate(today.getDate() - (Math.floor(Math.random() * 100) + 91));
-
     const randomCleaner1 =
       cleaners[Math.floor(Math.random() * cleaners.length)];
     const randomCleaner2 =
       cleaners[Math.floor(Math.random() * cleaners.length)];
-
     cleaningHistory.push({
       date: recentDate,
       cleanerName: randomCleaner1,
@@ -154,7 +150,6 @@ const createDummyData = () => {
       beforeCleanImage: defaultBeforeImage,
       afterCleanImage: defaultAfterImage,
     });
-
     data.push({
       id: i,
       postOffice: po.name,
@@ -306,6 +301,29 @@ const Dashboard = ({
   );
 };
 
+// --- Toast Notification Component ---
+const Toast = ({
+  message,
+  onClose,
+}: {
+  message: string;
+  onClose: () => void;
+}) => {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onClose();
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  return (
+    <div className="fixed top-5 right-5 z-[100] bg-slate-800 text-white px-4 py-3 rounded-md shadow-lg flex items-center gap-3 animate-slide-in">
+      <CheckCircle size={20} className="text-green-400" />
+      <span>{message}</span>
+    </div>
+  );
+};
+
 export default function MailboxApp() {
   // --- States ---
   const [mailboxes, setMailboxes] = useState<Mailbox[]>([]);
@@ -313,6 +331,14 @@ export default function MailboxApp() {
   const [selectedMapMailboxes, setSelectedMapMailboxes] = useState<Mailbox[]>(
     []
   );
+  const [toast, setToast] = useState<{ show: boolean; message: string }>({
+    show: false,
+    message: "",
+  });
+  const [uploadProgress, setUploadProgress] = useState<{
+    before: number;
+    after: number;
+  }>({ before: 0, after: 0 });
 
   useEffect(() => {
     const allMailboxes = createDummyData();
@@ -347,7 +373,6 @@ export default function MailboxApp() {
     }),
     [POST_OFFICES, JURISDICTIONS]
   );
-
   const [searchTerm, setSearchTerm] = useState("");
   const [jurisdictionFilter, setJurisdictionFilter] = useState<string>("");
   const [postOfficeFilter, setPostOfficeFilter] = useState<string>("");
@@ -431,6 +456,9 @@ export default function MailboxApp() {
   }, [searchTerm, jurisdictionFilter, postOfficeFilter]);
 
   // --- Handlers ---
+  const showToast = (message: string) => {
+    setToast({ show: true, message });
+  };
   const handleMapSelectionChange = (mailbox: Mailbox, checked: boolean) => {
     setSelectedMapMailboxes((prev) => {
       if (checked) {
@@ -463,26 +491,33 @@ export default function MailboxApp() {
   };
   const handleImageUpload = async (
     event: ChangeEvent<HTMLInputElement>,
-    setImageSetter: React.Dispatch<React.SetStateAction<string>>
+    imageType: "before" | "after"
   ) => {
     const file = event.target.files?.[0];
-    if (file) {
-      try {
-        const options = {
-          maxSizeMB: 1,
-          maxWidthOrHeight: 800,
-          useWebWorker: true,
-        };
-        const compressedFile = await imageCompression(file, options);
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setImageSetter(reader.result as string);
-        };
-        reader.readAsDataURL(compressedFile);
-      } catch (error) {
-        console.error("Image compression failed:", error);
-        alert("เกิดข้อผิดพลาดในการบีบอัดรูปภาพ");
-      }
+    if (!file) return;
+    setUploadProgress((prev) => ({ ...prev, [imageType]: 0 }));
+    const options = {
+      maxSizeMB: 1,
+      maxWidthOrHeight: 800,
+      useWebWorker: true,
+      onProgress: (percent: number) => {
+        setUploadProgress((prev) => ({ ...prev, [imageType]: percent }));
+      },
+    };
+    try {
+      const compressedFile = await imageCompression(file, options);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (imageType === "before")
+          setReportBeforeImage(reader.result as string);
+        if (imageType === "after") setReportAfterImage(reader.result as string);
+        setUploadProgress((prev) => ({ ...prev, [imageType]: 100 }));
+      };
+      reader.readAsDataURL(compressedFile);
+    } catch (error) {
+      console.error("Image compression failed:", error);
+      alert("เกิดข้อผิดพลาดในการบีบอัดรูปภาพ");
+      setUploadProgress((prev) => ({ ...prev, [imageType]: 0 }));
     }
   };
   const getCurrentLocation = () => {
@@ -531,6 +566,7 @@ export default function MailboxApp() {
     if (formMode === "add") {
       const newEntry: Mailbox = { id: Date.now(), ...currentFormData };
       setMailboxes([newEntry, ...mailboxes]);
+      showToast("บันทึกข้อมูลเรียบร้อยแล้ว");
     } else {
       setMailboxes(
         mailboxes.map((m) =>
@@ -539,6 +575,7 @@ export default function MailboxApp() {
             : m
         )
       );
+      showToast("แก้ไขข้อมูลเรียบร้อยแล้ว");
     }
     closeFormModal();
   };
@@ -549,6 +586,7 @@ export default function MailboxApp() {
     setReportCleanerName("");
     const today = new Date().toISOString().split("T")[0];
     setReportDate(today);
+    setUploadProgress({ before: 0, after: 0 });
     setIsReportModalOpen(true);
   };
   const closeReportModal = () => {
@@ -588,6 +626,7 @@ export default function MailboxApp() {
       });
     });
     closeReportModal();
+    showToast("รายงานผลเรียบร้อยแล้ว");
   };
   const openImageModal = (imageUrl: string) => {
     setFullImageUrl(imageUrl);
@@ -611,11 +650,21 @@ export default function MailboxApp() {
   };
 
   if (!isClient) {
-    return <div className="w-screen h-screen bg-slate-50" />;
+    return (
+      <div className="w-screen h-screen bg-slate-50 flex items-center justify-center">
+        <p className="text-slate-500 animate-pulse">กำลังโหลดข้อมูล...</p>
+      </div>
+    );
   }
 
   return (
     <div className="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+      {toast.show && (
+        <Toast
+          message={toast.message}
+          onClose={() => setToast({ show: false, message: "" })}
+        />
+      )}
       <main className="flex-grow container mx-auto p-4 md:p-6 lg:p-8 space-y-6">
         <header>
           <h1 className="text-3xl font-bold text-slate-900">
@@ -932,14 +981,15 @@ export default function MailboxApp() {
 
       <footer className="mt-auto">
         <div className="container mx-auto px-4 sm:px-6 py-6 flex justify-between items-center text-sm text-slate-500 border-t border-slate-200">
-          <span>
-            © {new Date().getFullYear()} next-mailbox. All rights reserved.
-          </span>
+          <p className="flex items-center justify-center gap-1.5">
+            Made with <span className="text-red-500">❤️</span> by Megamind
+          </p>
           <a
-            href="https://github.com"
+            href="https://github.com/game1095/"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-slate-900 transition-colors"
+            aria-label="GitHub Repository"
           >
             <Github size={20} />
           </a>
@@ -1319,10 +1369,18 @@ export default function MailboxApp() {
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={(e) => handleImageUpload(e, setReportBeforeImage)}
+                  onChange={(e) => handleImageUpload(e, "before")}
                   className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100"
                   required
                 />{" "}
+                {uploadProgress.before > 0 && (
+                  <div className="mt-2 w-full bg-slate-200 rounded-full h-2.5">
+                    <div
+                      className="bg-sky-500 h-2.5 rounded-full"
+                      style={{ width: `${uploadProgress.before}%` }}
+                    ></div>
+                  </div>
+                )}{" "}
                 {reportBeforeImage && (
                   <img
                     src={reportBeforeImage}
@@ -1339,10 +1397,18 @@ export default function MailboxApp() {
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={(e) => handleImageUpload(e, setReportAfterImage)}
+                  onChange={(e) => handleImageUpload(e, "after")}
                   className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100"
                   required
                 />{" "}
+                {uploadProgress.after > 0 && (
+                  <div className="mt-2 w-full bg-slate-200 rounded-full h-2.5">
+                    <div
+                      className="bg-sky-500 h-2.5 rounded-full"
+                      style={{ width: `${uploadProgress.after}%` }}
+                    ></div>
+                  </div>
+                )}{" "}
                 {reportAfterImage && (
                   <img
                     src={reportAfterImage}
@@ -1413,7 +1479,7 @@ export default function MailboxApp() {
 
       <style
         dangerouslySetInnerHTML={{
-          __html: `@keyframes scale-in { from { transform: scale(0.98); opacity: 0; } to { transform: scale(1); opacity: 1; } } .animate-scale-in { animation: scale-in 0.3s ease-out forwards; }`,
+          __html: `@keyframes scale-in { from { transform: scale(0.98); opacity: 0; } to { transform: scale(1); opacity: 1; } } @keyframes slide-in { from { transform: translateY(-20px) translateX(50%); opacity: 0; } to { transform: translateY(0) translateX(50%); opacity: 1; } } .animate-scale-in { animation: scale-in 0.2s ease-out forwards; } .animate-slide-in { animation: slide-in 0.3s ease-out forwards; right: 50%; }`,
         }}
       />
     </div>
