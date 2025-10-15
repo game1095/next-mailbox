@@ -22,7 +22,6 @@ import {
   X,
   BarChart2,
   Camera,
-  CalendarDays,
   CheckCircle,
 } from "lucide-react";
 import dynamic from "next/dynamic";
@@ -71,91 +70,6 @@ interface Mailbox {
 type MailboxSortKey =
   | keyof Omit<Mailbox, "lat" | "lng" | "cleaningHistory">
   | "lastCleaned";
-
-// --- ✨ Dummy Data Generator (Updated with Static Data) ✨ ---
-const createDummyData = () => {
-  const postOfficeData = [
-    { name: "ปณ.นครสวรรค์", code: "60000", juris: "ปจ.นครสวรรค์" },
-    { name: "ปณ.หนองบัว", code: "60110", juris: "ปจ.นครสวรรค์" },
-    { name: "ปณ.ชุมแสง", code: "60120", juris: "ปจ.นครสวรรค์" },
-    { name: "ปณ.ตาคลี", code: "60140", juris: "ปจ.นครสวรรค์" },
-    { name: "ปณ.บรรพตพิสัย", code: "60180", juris: "ปจ.นครสวรรค์" },
-    { name: "ปณ.อุทัยธานี", code: "61000", juris: "ปจ.อุทัยธานี" },
-    { name: "ปณ.ลานสัก", code: "61160", juris: "ปจ.อุทัยธานี" },
-    { name: "ปณ.กำแพงเพชร", code: "62000", juris: "ปจ.กำแพงเพชร" },
-    { name: "ปณ.คลองขลุง", code: "62120", juris: "ปจ.กำแพงเพชร" },
-    { name: "ปณ.ตาก", code: "63000", juris: "ปจ.ตาก" },
-    { name: "ปณ.แม่สอด", code: "63110", juris: "ปจ.ตาก" },
-    { name: "ปณ.สุโขทัย", code: "64000", juris: "ปจ.สุโขทัย" },
-    { name: "ปณ.สวรรคโลก", code: "64110", juris: "ปจ.สุโขทัย" },
-    { name: "ปณ.พิษณุโลก", code: "65000", juris: "ปจ.พิษณุโลก" },
-    { name: "ปณ.บางระกำ", code: "65140", juris: "ปจ.พิษณุโลก" },
-  ];
-  const landmarks = [
-    "ตรงข้ามโรงเรียนอนุบาล",
-    "หน้าตลาดเทศบาล",
-    "ข้างธนาคารกรุงไทย",
-    "ติด 7-Eleven ปากซอย",
-    "สี่แยกไฟแดงใหญ่",
-    "ใกล้ที่ว่าการอำเภอ",
-    "วงเวียนหอนาฬิกา",
-    "หลังสถานีตำรวจ",
-    "หน้าโรงพยาบาล",
-    "ติดกับร้านทอง",
-    "ทางเข้าวัดหลวงพ่อ",
-    "ตรงข้ามปั๊ม ปตท.",
-    "หน้าวิทยาลัยเทคนิค",
-    "ข้างสำนักงานที่ดิน",
-    "บริเวณคิวรถตู้",
-  ];
-  const cleaners = [
-    "ทีมงาน A",
-    "ทีมงาน B",
-    "ทีมงาน C",
-    "เจ้าหน้าที่ 1",
-    "เจ้าหน้าที่ 2",
-  ];
-  const data: Mailbox[] = [];
-  const defaultBeforeImage =
-    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Cline x1='12' y1='8' x2='12' y2='16'%3E%3C/cline%3E%3Cline x1='8' y1='12' x2='16' y2='12'%3E%3C/cline%3E%3C/svg%3E";
-  const defaultAfterImage =
-    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M22 11.08V12a10 10 0 1 1-5.93-8.87'%3E%3C/path%3E%3Cpolyline points='22 4 12 14.01 9 11.01'%3E%3C/polyline%3E%3C/svg%3E";
-
-  // สร้างข้อมูล 15 รายการ
-  for (let i = 0; i < 15; i++) {
-    const po = postOfficeData[i];
-    const landmark = landmarks[i];
-
-    const cleaningHistory: CleaningRecord[] = [
-      {
-        date: new Date(2025, 8, 25), // 8 = ก.ย.
-        cleanerName: cleaners[i % cleaners.length],
-        beforeCleanImage: defaultBeforeImage,
-        afterCleanImage: defaultAfterImage,
-      },
-      {
-        date: new Date(2025, 3, 10), // 3 = เม.ย.
-        cleanerName: cleaners[(i + 1) % cleaners.length],
-        beforeCleanImage: defaultBeforeImage,
-        afterCleanImage: defaultAfterImage,
-      },
-    ];
-
-    data.push({
-      id: i + 1,
-      postOffice: po.name,
-      postalCode: po.code,
-      jurisdiction: po.juris,
-      landmark: `${landmark} (${i + 1})`,
-      lat: "15.686800",
-      lng: "100.115100",
-      cleaningHistory: cleaningHistory.sort(
-        (a, b) => b.date.getTime() - a.date.getTime()
-      ),
-    });
-  }
-  return data;
-};
 
 // --- Helper Function to Format Date ---
 const formatDateToThai = (date: Date) => {
@@ -332,9 +246,6 @@ export default function MailboxApp() {
   }>({ before: 0, after: 0 });
 
   useEffect(() => {
-    const allMailboxes = createDummyData();
-    setMailboxes(allMailboxes);
-    setSelectedMapMailboxes(allMailboxes);
     setIsClient(true);
   }, []);
 
@@ -364,6 +275,7 @@ export default function MailboxApp() {
     }),
     [POST_OFFICES, JURISDICTIONS]
   );
+
   const [searchTerm, setSearchTerm] = useState("");
   const [jurisdictionFilter, setJurisdictionFilter] = useState<string>("");
   const [postOfficeFilter, setPostOfficeFilter] = useState<string>("");
