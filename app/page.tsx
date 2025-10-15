@@ -7,7 +7,6 @@ import React, {
   FormEvent,
   useEffect,
 } from "react";
-// ✨ แก้ไข: ลบ CalendarDays ที่ไม่ได้ใช้ออก และเพิ่ม CheckCircle
 import {
   PlusCircle,
   Search,
@@ -401,10 +400,9 @@ export default function MailboxApp() {
 
   // --- Logic ---
   const sortedMailboxes = useMemo(() => {
-    // ✨ แก้ไข: เปลี่ยน 'let' เป็น 'const'
     const sortableItems = [...mailboxes];
-    // ✨ แก้ไข: เพิ่มเงื่อนไขตรวจสอบว่า sortConfig.key ไม่ใช่ null
     if (sortConfig.key) {
+      // ✨ แก้ไข: เพิ่มเงื่อนไขตรวจสอบว่า sortConfig.key ไม่ใช่ null
       sortableItems.sort((a, b) => {
         if (sortConfig.key === "lastCleaned") {
           const dateA = a.cleaningHistory[0]?.date || new Date(0);
