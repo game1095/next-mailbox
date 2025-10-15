@@ -400,7 +400,7 @@ export default function MailboxApp() {
 
   // --- Logic ---
   const sortedMailboxes = useMemo(() => {
-    let sortableItems = [...mailboxes];
+    const sortableItems = [...mailboxes];
     if (sortConfig.key) {
       sortableItems.sort((a, b) => {
         if (sortConfig.key === "lastCleaned") {
