@@ -13,6 +13,9 @@ import {
   MapPin,
   Eye,
   Pencil,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
   ChevronLeft,
   ChevronRight,
   Github,
@@ -64,6 +67,9 @@ interface Mailbox {
   lng: number | string;
   cleaningHistory: CleaningRecord[];
 }
+type MailboxSortKey =
+  | keyof Omit<Mailbox, "lat" | "lng" | "cleaningHistory">
+  | "lastCleaned";
 
 // --- Helper Function to Format Date ---
 const formatDateToThai = (date: Date) => {
@@ -226,6 +232,7 @@ const Toast = ({
 export default function MailboxApp() {
   // --- States ---
   const [mailboxes, setMailboxes] = useState<Mailbox[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isClient, setIsClient] = useState(false);
   const [selectedMapMailboxes, setSelectedMapMailboxes] = useState<Mailbox[]>(
     []
@@ -239,7 +246,33 @@ export default function MailboxApp() {
     after: number;
   }>({ before: 0, after: 0 });
 
+  const fetchMailboxes = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch("/api/mailboxes");
+      if (!response.ok) throw new Error("Failed to fetch data");
+      const data = await response.json();
+      const formattedData = data.map((mailbox: any) => ({
+        ...mailbox,
+        cleaningHistory: (mailbox.cleaning_history || [])
+          .map((record: any) => ({
+            ...record,
+            date: new Date(record.date),
+          }))
+          .sort((a: any, b: any) => b.date.getTime() - a.date.getTime()),
+      }));
+      setMailboxes(formattedData);
+      setSelectedMapMailboxes(formattedData);
+    } catch (error) {
+      console.error("Fetch error:", error);
+      showToast("ไม่สามารถโหลดข้อมูลได้");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
+    fetchMailboxes();
     setIsClient(true);
   }, []);
 
@@ -269,9 +302,14 @@ export default function MailboxApp() {
     }),
     [POST_OFFICES, JURISDICTIONS]
   );
+
   const [searchTerm, setSearchTerm] = useState("");
   const [jurisdictionFilter, setJurisdictionFilter] = useState<string>("");
   const [postOfficeFilter, setPostOfficeFilter] = useState<string>("");
+  const [sortConfig, setSortConfig] = useState<{
+    key: MailboxSortKey | null;
+    direction: "ascending" | "descending";
+  }>({ key: null, direction: "descending" });
   const [currentPage, setCurrentPage] = useState(1);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedMailbox, setSelectedMailbox] = useState<Mailbox | null>(null);
@@ -291,9 +329,33 @@ export default function MailboxApp() {
   const ITEMS_PER_PAGE = 10;
 
   // --- Logic ---
+  const sortedMailboxes = useMemo(() => {
+    const sortableItems = [...mailboxes];
+    if (sortConfig.key) {
+      sortableItems.sort((a, b) => {
+        if (sortConfig.key === "lastCleaned") {
+          const dateA = a.cleaningHistory[0]?.date || new Date(0);
+          const dateB = b.cleaningHistory[0]?.date || new Date(0);
+          if (dateA < dateB)
+            return sortConfig.direction === "ascending" ? -1 : 1;
+          if (dateA > dateB)
+            return sortConfig.direction === "ascending" ? 1 : -1;
+          return 0;
+        }
+
+        const valA = a[sortConfig.key];
+        const valB = b[sortConfig.key];
+        if (valA < valB) return sortConfig.direction === "ascending" ? -1 : 1;
+        if (valA > valB) return sortConfig.direction === "ascending" ? 1 : -1;
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [mailboxes, sortConfig]);
+
   const filteredMailboxes = useMemo(() => {
     if (mailboxes.length === 0) return [];
-    let items = [...mailboxes]; // Start with a copy
+    let items = sortedMailboxes;
     if (jurisdictionFilter)
       items = items.filter((m) => m.jurisdiction === jurisdictionFilter);
     if (postOfficeFilter)
@@ -305,15 +367,19 @@ export default function MailboxApp() {
       );
     }
     return items;
-  }, [mailboxes, searchTerm, jurisdictionFilter, postOfficeFilter]);
-
+  }, [
+    sortedMailboxes,
+    searchTerm,
+    jurisdictionFilter,
+    postOfficeFilter,
+    mailboxes.length,
+  ]);
   const paginatedMailboxes = useMemo(() => {
     return (filteredMailboxes || []).slice(
       (currentPage - 1) * ITEMS_PER_PAGE,
       (currentPage - 1) * ITEMS_PER_PAGE + ITEMS_PER_PAGE
     );
   }, [currentPage, filteredMailboxes]);
-
   const totalPages = Math.ceil(
     (filteredMailboxes || []).length / ITEMS_PER_PAGE
   );
@@ -340,6 +406,12 @@ export default function MailboxApp() {
     } else {
       setSelectedMapMailboxes([]);
     }
+  };
+  const requestSort = (key: MailboxSortKey) => {
+    let direction: "ascending" | "descending" = "ascending";
+    if (sortConfig.key === key && sortConfig.direction === "ascending")
+      direction = "descending";
+    setSortConfig({ key, direction });
   };
   const handleFormInputChange = (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -412,7 +484,8 @@ export default function MailboxApp() {
     setIsDetailModalOpen(true);
   };
   const closeDetailModal = () => setIsDetailModalOpen(false);
-  const handleFormSubmit = (e: FormEvent) => {
+
+  const handleFormSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (
       !currentFormData.landmark ||
@@ -423,22 +496,22 @@ export default function MailboxApp() {
       alert("กรุณากรอกข้อมูลให้ครบถ้วน");
       return;
     }
-    if (formMode === "add") {
-      const newEntry: Mailbox = { id: Date.now(), ...currentFormData };
-      setMailboxes([newEntry, ...mailboxes]);
+
+    const response = await fetch("/api/mailboxes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...currentFormData, cleaningHistory: undefined }),
+    });
+
+    if (response.ok) {
       showToast("บันทึกข้อมูลเรียบร้อยแล้ว");
+      fetchMailboxes();
+      closeFormModal();
     } else {
-      setMailboxes(
-        mailboxes.map((m) =>
-          m.id === (currentFormData as Mailbox).id
-            ? { ...m, ...(currentFormData as Mailbox) }
-            : m
-        )
-      );
-      showToast("แก้ไขข้อมูลเรียบร้อยแล้ว");
+      showToast("เกิดข้อผิดพลาดในการบันทึก");
     }
-    closeFormModal();
   };
+
   const openReportModal = (mailboxId: number) => {
     setReportMailboxId(mailboxId);
     setReportBeforeImage("");
@@ -453,7 +526,8 @@ export default function MailboxApp() {
     setIsReportModalOpen(false);
     setReportMailboxId(null);
   };
-  const handleReportSubmit = (e: FormEvent) => {
+
+  const handleReportSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (
       !reportMailboxId ||
@@ -465,29 +539,28 @@ export default function MailboxApp() {
       alert("กรุณากรอกข้อมูลและอัปโหลดรูปภาพให้ครบถ้วน");
       return;
     }
-    setMailboxes((prevMailboxes) => {
-      return prevMailboxes.map((mailbox) => {
-        if (mailbox.id === reportMailboxId) {
-          const newCleaningRecord: CleaningRecord = {
-            date: new Date(reportDate),
-            cleanerName: reportCleanerName,
-            beforeCleanImage: reportBeforeImage,
-            afterCleanImage: reportAfterImage,
-          };
-          return {
-            ...mailbox,
-            cleaningHistory: [
-              newCleaningRecord,
-              ...mailbox.cleaningHistory,
-            ].sort((a, b) => b.date.getTime() - a.date.getTime()),
-          };
-        }
-        return mailbox;
-      });
+
+    const response = await fetch("/api/cleaning", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        mailbox_id: reportMailboxId,
+        cleanerName: reportCleanerName,
+        date: reportDate,
+        beforeCleanImage: reportBeforeImage,
+        afterCleanImage: reportAfterImage,
+      }),
     });
-    closeReportModal();
-    showToast("รายงานผลเรียบร้อยแล้ว");
+
+    if (response.ok) {
+      showToast("รายงานผลเรียบร้อยแล้ว");
+      fetchMailboxes();
+      closeReportModal();
+    } else {
+      showToast("เกิดข้อผิดพลาดในการรายงานผล");
+    }
   };
+
   const openImageModal = (imageUrl: string) => {
     setFullImageUrl(imageUrl);
     setIsImageModalOpen(true);
@@ -509,7 +582,7 @@ export default function MailboxApp() {
     else return "bg-green-100 text-green-700";
   };
 
-  if (!isClient) {
+  if (isLoading || !isClient) {
     return (
       <div className="w-screen h-screen bg-slate-50 flex items-center justify-center">
         <p className="text-slate-500 animate-pulse">กำลังโหลดข้อมูล...</p>
@@ -606,16 +679,72 @@ export default function MailboxApp() {
                         />
                       </th>
                       <th className="px-4 py-3 text-left font-semibold text-slate-600">
-                        ที่ทำการฯ
+                        <button
+                          onClick={() => requestSort("postOffice")}
+                          className="flex items-center gap-2"
+                        >
+                          ที่ทำการฯ{" "}
+                          {sortConfig.key === "postOffice" ? (
+                            sortConfig.direction === "ascending" ? (
+                              <ArrowUp size={14} />
+                            ) : (
+                              <ArrowDown size={14} />
+                            )
+                          ) : (
+                            <ArrowUpDown size={14} className="opacity-40" />
+                          )}
+                        </button>
                       </th>
                       <th className="px-4 py-3 text-left font-semibold text-slate-600">
-                        จุดสังเกต
+                        <button
+                          onClick={() => requestSort("landmark")}
+                          className="flex items-center gap-2"
+                        >
+                          จุดสังเกต{" "}
+                          {sortConfig.key === "landmark" ? (
+                            sortConfig.direction === "ascending" ? (
+                              <ArrowUp size={14} />
+                            ) : (
+                              <ArrowDown size={14} />
+                            )
+                          ) : (
+                            <ArrowUpDown size={14} className="opacity-40" />
+                          )}
+                        </button>
                       </th>
                       <th className="px-4 py-3 text-left font-semibold text-slate-600">
-                        สังกัด
+                        <button
+                          onClick={() => requestSort("jurisdiction")}
+                          className="flex items-center gap-2"
+                        >
+                          สังกัด{" "}
+                          {sortConfig.key === "jurisdiction" ? (
+                            sortConfig.direction === "ascending" ? (
+                              <ArrowUp size={14} />
+                            ) : (
+                              <ArrowDown size={14} />
+                            )
+                          ) : (
+                            <ArrowUpDown size={14} className="opacity-40" />
+                          )}
+                        </button>
                       </th>
                       <th className="px-4 py-3 text-left font-semibold text-slate-600">
-                        ล่าสุด
+                        <button
+                          onClick={() => requestSort("lastCleaned")}
+                          className="flex items-center gap-2"
+                        >
+                          ล่าสุด{" "}
+                          {sortConfig.key === "lastCleaned" ? (
+                            sortConfig.direction === "ascending" ? (
+                              <ArrowUp size={14} />
+                            ) : (
+                              <ArrowDown size={14} />
+                            )
+                          ) : (
+                            <ArrowUpDown size={14} className="opacity-40" />
+                          )}
+                        </button>
                       </th>
                       <th className="px-4 py-3 text-center font-semibold text-slate-600">
                         จัดการ
