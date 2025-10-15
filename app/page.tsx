@@ -6,6 +6,7 @@ import React, {
   ChangeEvent,
   FormEvent,
   useEffect,
+  useCallback,
 } from "react";
 import {
   PlusCircle,
@@ -13,9 +14,6 @@ import {
   MapPin,
   Eye,
   Pencil,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
   ChevronLeft,
   ChevronRight,
   Github,
@@ -185,7 +183,7 @@ const Dashboard = ({
         </select>
       </div>
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-2 bg-slate-50 border border-slate-200 rounded-lg p-4">
+        <div className="xl-col-span-2 bg-slate-50 border border-slate-200 rounded-lg p-4">
           <h3 className="font-semibold text-slate-700 text-center">
             จำนวนตู้ฯ แยกตามที่ทำการ
           </h3>
@@ -246,12 +244,16 @@ export default function MailboxApp() {
     after: number;
   }>({ before: 0, after: 0 });
 
-  const fetchMailboxes = async () => {
+  const showToast = useCallback((message: string) => {
+    setToast({ show: true, message });
+  }, []);
+
+  const fetchMailboxes = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await fetch("/api/mailboxes");
       if (!response.ok) throw new Error("Failed to fetch data");
-      const data = await response.json();
+      const data: any[] = await response.json();
       const formattedData = data.map((mailbox: any) => ({
         ...mailbox,
         cleaningHistory: (mailbox.cleaning_history || [])
@@ -269,12 +271,12 @@ export default function MailboxApp() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [showToast]);
 
   useEffect(() => {
-    fetchMailboxes();
     setIsClient(true);
-  }, []);
+    fetchMailboxes();
+  }, [fetchMailboxes]);
 
   const POST_OFFICES = useMemo(
     () =>
@@ -388,9 +390,6 @@ export default function MailboxApp() {
   }, [searchTerm, jurisdictionFilter, postOfficeFilter]);
 
   // --- Handlers ---
-  const showToast = (message: string) => {
-    setToast({ show: true, message });
-  };
   const handleMapSelectionChange = (mailbox: Mailbox, checked: boolean) => {
     setSelectedMapMailboxes((prev) => {
       if (checked) {
