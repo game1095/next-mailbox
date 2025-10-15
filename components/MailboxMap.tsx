@@ -2,9 +2,9 @@
 
 import "leaflet/dist/leaflet.css";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+// ✨ แก้ไข: ลบ useMemo ที่ไม่ได้ใช้ออก
 import { LatLngExpression, Map } from "leaflet";
 import L from "leaflet";
-// ✨ แก้ไข: ลบ useMemo ที่ไม่ได้ใช้ออก
 import { useEffect, useRef } from "react";
 
 // Interface

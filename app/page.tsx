@@ -7,7 +7,7 @@ import React, {
   FormEvent,
   useEffect,
 } from "react";
-// ✨ แก้ไข: เพิ่ม CheckCircle เข้ามาใน import ✨
+// ✨ แก้ไข: ลบ CalendarDays ที่ไม่ได้ใช้ออก และเพิ่ม CheckCircle
 import {
   PlusCircle,
   Search,
@@ -38,7 +38,7 @@ import {
   ArcElement,
 } from "chart.js";
 import imageCompression from "browser-image-compression";
-import Image from "next/image"; // ✨ เพิ่ม Import สำหรับ Next/Image
+import Image from "next/image";
 
 ChartJS.register(
   CategoryScale,
@@ -1278,6 +1278,8 @@ export default function MailboxApp() {
                                   <Image
                                     src={record.beforeCleanImage}
                                     alt="Before"
+                                    width={64}
+                                    height={64}
                                     className="w-16 h-16 object-cover rounded-md cursor-pointer mx-auto border"
                                     onClick={() =>
                                       openImageModal(
@@ -1295,6 +1297,8 @@ export default function MailboxApp() {
                                   <Image
                                     src={record.afterCleanImage}
                                     alt="After"
+                                    width={64}
+                                    height={64}
                                     className="w-16 h-16 object-cover rounded-md cursor-pointer mx-auto border"
                                     onClick={() =>
                                       openImageModal(
@@ -1390,6 +1394,8 @@ export default function MailboxApp() {
                   <Image
                     src={reportBeforeImage}
                     alt="Before Preview"
+                    width={128}
+                    height={128}
                     className="mt-2 w-32 h-32 object-cover rounded-md border"
                   />
                 )}{" "}
@@ -1418,6 +1424,8 @@ export default function MailboxApp() {
                   <Image
                     src={reportAfterImage}
                     alt="After Preview"
+                    width={128}
+                    height={128}
                     className="mt-2 w-32 h-32 object-cover rounded-md border"
                   />
                 )}{" "}
@@ -1470,6 +1478,8 @@ export default function MailboxApp() {
             <Image
               src={fullImageUrl}
               alt="Full Screen"
+              width={1920}
+              height={1080}
               className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl border-4 border-white"
             />{" "}
             <button
