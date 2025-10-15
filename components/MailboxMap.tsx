@@ -5,7 +5,7 @@ import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 // ✨ แก้ไข: ลบ LatLngBounds ที่ไม่ได้ใช้ออก
 import { LatLngExpression, Map } from "leaflet";
 import L from "leaflet";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react"; // เพิ่ม useMemo
 
 // Interface
 interface Mailbox {
@@ -32,12 +32,13 @@ const smallRedIcon = new L.Icon({
   shadowSize: [21, 21],
 });
 
+// ✨ แก้ไข: ย้าย defaultPosition และ defaultZoom ออกมานอก Component
+const defaultPosition: LatLngExpression = [15.7, 100.12];
+const defaultZoom = 8;
+
 const MailboxMap = ({ mailboxes }: MailboxMapProps) => {
   const mapRef = useRef<Map>(null);
-  const defaultPosition: LatLngExpression = [15.7, 100.12];
-  const defaultZoom = 8;
 
-  // ✨ แก้ไข: เพิ่ม defaultPosition และ defaultZoom ใน dependency array ✨
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -53,7 +54,7 @@ const MailboxMap = ({ mailboxes }: MailboxMapProps) => {
     } else {
       map.flyTo(defaultPosition, defaultZoom);
     }
-  }, [mailboxes, defaultPosition, defaultZoom]);
+  }, [mailboxes]); // ✨ แก้ไข: ลบ dependency ที่ไม่จำเป็นออก
 
   return (
     <MapContainer
@@ -64,7 +65,7 @@ const MailboxMap = ({ mailboxes }: MailboxMapProps) => {
       style={{ height: "100%", width: "100%" }}
     >
       <TileLayer
-        attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       {mailboxes.map((marker) => (

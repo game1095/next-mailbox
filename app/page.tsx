@@ -7,7 +7,7 @@ import React, {
   FormEvent,
   useEffect,
 } from "react";
-// ✨ แก้ไข: ลบ CalendarDays ที่ไม่ได้ใช้ออก
+// ✨ แก้ไข: เพิ่ม CheckCircle เข้ามาใน import ✨
 import {
   PlusCircle,
   Search,
@@ -23,6 +23,8 @@ import {
   X,
   BarChart2,
   Camera,
+  CalendarDays,
+  CheckCircle,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { Bar, Pie } from "react-chartjs-2";
@@ -37,6 +39,7 @@ import {
   ArcElement,
 } from "chart.js";
 import imageCompression from "browser-image-compression";
+import Image from "next/image"; // ✨ เพิ่ม Import สำหรับ Next/Image
 
 ChartJS.register(
   CategoryScale,
@@ -1271,7 +1274,7 @@ export default function MailboxApp() {
                               <td className="px-4 py-3 text-center">
                                 {" "}
                                 {record.beforeCleanImage ? (
-                                  <img
+                                  <Image
                                     src={record.beforeCleanImage}
                                     alt="Before"
                                     className="w-16 h-16 object-cover rounded-md cursor-pointer mx-auto border"
@@ -1288,7 +1291,7 @@ export default function MailboxApp() {
                               <td className="px-4 py-3 text-center">
                                 {" "}
                                 {record.afterCleanImage ? (
-                                  <img
+                                  <Image
                                     src={record.afterCleanImage}
                                     alt="After"
                                     className="w-16 h-16 object-cover rounded-md cursor-pointer mx-auto border"
@@ -1383,7 +1386,7 @@ export default function MailboxApp() {
                   </div>
                 )}{" "}
                 {reportBeforeImage && (
-                  <img
+                  <Image
                     src={reportBeforeImage}
                     alt="Before Preview"
                     className="mt-2 w-32 h-32 object-cover rounded-md border"
@@ -1411,7 +1414,7 @@ export default function MailboxApp() {
                   </div>
                 )}{" "}
                 {reportAfterImage && (
-                  <img
+                  <Image
                     src={reportAfterImage}
                     alt="After Preview"
                     className="mt-2 w-32 h-32 object-cover rounded-md border"
@@ -1463,7 +1466,7 @@ export default function MailboxApp() {
             onClick={(e) => e.stopPropagation()}
           >
             {" "}
-            <img
+            <Image
               src={fullImageUrl}
               alt="Full Screen"
               className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl border-4 border-white"
