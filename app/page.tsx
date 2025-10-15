@@ -7,6 +7,7 @@ import React, {
   FormEvent,
   useEffect,
 } from "react";
+// ✨ แก้ไข: ลบ CalendarDays และเพิ่ม CheckCircle
 import {
   PlusCircle,
   Search,
@@ -70,6 +71,101 @@ interface Mailbox {
 type MailboxSortKey =
   | keyof Omit<Mailbox, "lat" | "lng" | "cleaningHistory">
   | "lastCleaned";
+
+// --- Dummy Data Generator ---
+const createDummyData = () => {
+  const postOfficeData = [
+    { name: "ปณ.นครสวรรค์", code: "60000", juris: "ปจ.นครสวรรค์" },
+    { name: "ปณ.หนองบัว", code: "60110", juris: "ปจ.นครสวรรค์" },
+    { name: "ปณ.ชุมแสง", code: "60120", juris: "ปจ.นครสวรรค์" },
+    { name: "ปณ.ตาคลี", code: "60140", juris: "ปจ.นครสวรรค์" },
+    { name: "ปณ.บรรพตพิสัย", code: "60180", juris: "ปจ.นครสวรรค์" },
+    { name: "ปณ.อุทัยธานี", code: "61000", juris: "ปจ.อุทัยธานี" },
+    { name: "ปณ.ลานสัก", code: "61160", juris: "ปจ.อุทัยธานี" },
+    { name: "ปณ.กำแพงเพชร", code: "62000", juris: "ปจ.กำแพงเพชร" },
+    { name: "ปณ.คลองขลุง", code: "62120", juris: "ปจ.กำแพงเพชร" },
+    { name: "ปณ.ตาก", code: "63000", juris: "ปจ.ตาก" },
+    { name: "ปณ.แม่สอด", code: "63110", juris: "ปจ.ตาก" },
+    { name: "ปณ.สุโขทัย", code: "64000", juris: "ปจ.สุโขทัย" },
+    { name: "ปณ.สวรรคโลก", code: "64110", juris: "ปจ.สุโขทัย" },
+    { name: "ปณ.พิษณุโลก", code: "65000", juris: "ปจ.พิษณุโลก" },
+    { name: "ปณ.บางระกำ", code: "65140", juris: "ปจ.พิษณุโลก" },
+    { name: "ปณ.พิจิตร", code: "66000", juris: "ปจ.พิจิตร" },
+    { name: "ปณ.ตะพานหิน", code: "66110", juris: "ปจ.พิจิตร" },
+    { name: "ปณ.เพชรบูรณ์", code: "67000", juris: "ปจ.เพชรบูรณ์" },
+    { name: "ปณ.หล่มสัก", code: "67110", juris: "ปจ.เพชรบูรณ์" },
+  ];
+  const landmarks = [
+    "ตรงข้ามโรงเรียนอนุบาล",
+    "หน้าตลาดเทศบาล",
+    "ข้างธนาคารกรุงไทย",
+    "ติด 7-Eleven ปากซอย",
+    "สี่แยกไฟแดงใหญ่",
+    "ใกล้ที่ว่าการอำเภอ",
+    "วงเวียนหอนาฬิกา",
+    "หลังสถานีตำรวจ",
+    "หน้าโรงพยาบาล",
+    "ติดกับร้านทอง",
+    "ทางเข้าวัดหลวงพ่อ",
+    "ตรงข้ามปั๊ม ปตท.",
+    "หน้าวิทยาลัยเทคนิค",
+    "ข้างสำนักงานที่ดิน",
+    "บริเวณคิวรถตู้",
+  ];
+  const cleaners = [
+    "ทีมงาน A",
+    "ทีมงาน B",
+    "ทีมงาน C",
+    "เจ้าหน้าที่ 1",
+    "เจ้าหน้าที่ 2",
+    "เจ้าหน้าที่ 3",
+  ];
+  const data: Mailbox[] = [];
+  const defaultBeforeImage =
+    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Cline x1='12' y1='8' x2='12' y2='16'%3E%3C/cline%3E%3Cline x1='8' y1='12' x2='16' y2='12'%3E%3C/cline%3E%3C/svg%3E";
+  const defaultAfterImage =
+    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M22 11.08V12a10 10 0 1 1-5.93-8.87'%3E%3C/path%3E%3Cpolyline points='22 4 12 14.01 9 11.01'%3E%3C/polyline%3E%3C/svg%3E";
+  const today = new Date();
+  for (let i = 1; i <= 30; i++) {
+    const po =
+      postOfficeData[Math.floor(Math.random() * postOfficeData.length)];
+    const landmark = landmarks[Math.floor(Math.random() * landmarks.length)];
+    const cleaningHistory: CleaningRecord[] = [];
+    const recentDate = new Date(today);
+    recentDate.setDate(today.getDate() - (Math.floor(Math.random() * 89) + 1));
+    const oldDate = new Date(today);
+    oldDate.setDate(today.getDate() - (Math.floor(Math.random() * 100) + 91));
+    const randomCleaner1 =
+      cleaners[Math.floor(Math.random() * cleaners.length)];
+    const randomCleaner2 =
+      cleaners[Math.floor(Math.random() * cleaners.length)];
+    cleaningHistory.push({
+      date: recentDate,
+      cleanerName: randomCleaner1,
+      beforeCleanImage: defaultBeforeImage,
+      afterCleanImage: defaultAfterImage,
+    });
+    cleaningHistory.push({
+      date: oldDate,
+      cleanerName: randomCleaner2,
+      beforeCleanImage: defaultBeforeImage,
+      afterCleanImage: defaultAfterImage,
+    });
+    data.push({
+      id: i,
+      postOffice: po.name,
+      postalCode: po.code,
+      jurisdiction: po.juris,
+      landmark: `${landmark} (${i})`,
+      lat: (15.5 + Math.random() * 1.5).toFixed(6),
+      lng: (99.5 + Math.random() * 1.5).toFixed(6),
+      cleaningHistory: cleaningHistory.sort(
+        (a, b) => b.date.getTime() - a.date.getTime()
+      ),
+    });
+  }
+  return data;
+};
 
 // --- Helper Function to Format Date ---
 const formatDateToThai = (date: Date) => {
@@ -246,6 +342,9 @@ export default function MailboxApp() {
   }>({ before: 0, after: 0 });
 
   useEffect(() => {
+    const allMailboxes = createDummyData();
+    setMailboxes(allMailboxes);
+    setSelectedMapMailboxes(allMailboxes);
     setIsClient(true);
   }, []);
 
@@ -275,7 +374,6 @@ export default function MailboxApp() {
     }),
     [POST_OFFICES, JURISDICTIONS]
   );
-
   const [searchTerm, setSearchTerm] = useState("");
   const [jurisdictionFilter, setJurisdictionFilter] = useState<string>("");
   const [postOfficeFilter, setPostOfficeFilter] = useState<string>("");
@@ -304,6 +402,7 @@ export default function MailboxApp() {
   // --- Logic ---
   const sortedMailboxes = useMemo(() => {
     const sortableItems = [...mailboxes];
+    // ✨ แก้ไข: เพิ่มเงื่อนไขตรวจสอบว่า sortConfig.key ไม่ใช่ null
     if (sortConfig.key) {
       sortableItems.sort((a, b) => {
         if (sortConfig.key === "lastCleaned") {
