@@ -22,6 +22,7 @@ import {
   X,
   BarChart2,
   Camera,
+  CalendarDays,
   CheckCircle,
 } from "lucide-react";
 import dynamic from "next/dynamic";
@@ -71,7 +72,7 @@ type MailboxSortKey =
   | keyof Omit<Mailbox, "lat" | "lng" | "cleaningHistory">
   | "lastCleaned";
 
-// --- Dummy Data Generator ---
+// --- ✨ Dummy Data Generator (Updated with Static Data) ✨ ---
 const createDummyData = () => {
   const postOfficeData = [
     { name: "ปณ.นครสวรรค์", code: "60000", juris: "ปจ.นครสวรรค์" },
@@ -89,10 +90,6 @@ const createDummyData = () => {
     { name: "ปณ.สวรรคโลก", code: "64110", juris: "ปจ.สุโขทัย" },
     { name: "ปณ.พิษณุโลก", code: "65000", juris: "ปจ.พิษณุโลก" },
     { name: "ปณ.บางระกำ", code: "65140", juris: "ปจ.พิษณุโลก" },
-    { name: "ปณ.พิจิตร", code: "66000", juris: "ปจ.พิจิตร" },
-    { name: "ปณ.ตะพานหิน", code: "66110", juris: "ปจ.พิจิตร" },
-    { name: "ปณ.เพชรบูรณ์", code: "67000", juris: "ปจ.เพชรบูรณ์" },
-    { name: "ปณ.หล่มสัก", code: "67110", juris: "ปจ.เพชรบูรณ์" },
   ];
   const landmarks = [
     "ตรงข้ามโรงเรียนอนุบาล",
@@ -117,47 +114,41 @@ const createDummyData = () => {
     "ทีมงาน C",
     "เจ้าหน้าที่ 1",
     "เจ้าหน้าที่ 2",
-    "เจ้าหน้าที่ 3",
   ];
   const data: Mailbox[] = [];
   const defaultBeforeImage =
     "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Cline x1='12' y1='8' x2='12' y2='16'%3E%3C/cline%3E%3Cline x1='8' y1='12' x2='16' y2='12'%3E%3C/cline%3E%3C/svg%3E";
   const defaultAfterImage =
     "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M22 11.08V12a10 10 0 1 1-5.93-8.87'%3E%3C/path%3E%3Cpolyline points='22 4 12 14.01 9 11.01'%3E%3C/polyline%3E%3C/svg%3E";
-  const today = new Date();
-  for (let i = 1; i <= 30; i++) {
-    const po =
-      postOfficeData[Math.floor(Math.random() * postOfficeData.length)];
-    const landmark = landmarks[Math.floor(Math.random() * landmarks.length)];
-    const cleaningHistory: CleaningRecord[] = [];
-    const recentDate = new Date(today);
-    recentDate.setDate(today.getDate() - (Math.floor(Math.random() * 89) + 1));
-    const oldDate = new Date(today);
-    oldDate.setDate(today.getDate() - (Math.floor(Math.random() * 100) + 91));
-    const randomCleaner1 =
-      cleaners[Math.floor(Math.random() * cleaners.length)];
-    const randomCleaner2 =
-      cleaners[Math.floor(Math.random() * cleaners.length)];
-    cleaningHistory.push({
-      date: recentDate,
-      cleanerName: randomCleaner1,
-      beforeCleanImage: defaultBeforeImage,
-      afterCleanImage: defaultAfterImage,
-    });
-    cleaningHistory.push({
-      date: oldDate,
-      cleanerName: randomCleaner2,
-      beforeCleanImage: defaultBeforeImage,
-      afterCleanImage: defaultAfterImage,
-    });
+
+  // สร้างข้อมูล 15 รายการ
+  for (let i = 0; i < 15; i++) {
+    const po = postOfficeData[i];
+    const landmark = landmarks[i];
+
+    const cleaningHistory: CleaningRecord[] = [
+      {
+        date: new Date(2025, 8, 25), // 8 = ก.ย.
+        cleanerName: cleaners[i % cleaners.length],
+        beforeCleanImage: defaultBeforeImage,
+        afterCleanImage: defaultAfterImage,
+      },
+      {
+        date: new Date(2025, 3, 10), // 3 = เม.ย.
+        cleanerName: cleaners[(i + 1) % cleaners.length],
+        beforeCleanImage: defaultBeforeImage,
+        afterCleanImage: defaultAfterImage,
+      },
+    ];
+
     data.push({
-      id: i,
+      id: i + 1,
       postOffice: po.name,
       postalCode: po.code,
       jurisdiction: po.juris,
-      landmark: `${landmark} (${i})`,
-      lat: (15.5 + Math.random() * 1.5).toFixed(6),
-      lng: (99.5 + Math.random() * 1.5).toFixed(6),
+      landmark: `${landmark} (${i + 1})`,
+      lat: "15.686800",
+      lng: "100.115100",
       cleaningHistory: cleaningHistory.sort(
         (a, b) => b.date.getTime() - a.date.getTime()
       ),
@@ -402,7 +393,6 @@ export default function MailboxApp() {
   const sortedMailboxes = useMemo(() => {
     const sortableItems = [...mailboxes];
     if (sortConfig.key) {
-      // ✨ แก้ไข: เพิ่มเงื่อนไขตรวจสอบว่า sortConfig.key ไม่ใช่ null
       sortableItems.sort((a, b) => {
         if (sortConfig.key === "lastCleaned") {
           const dateA = a.cleaningHistory[0]?.date || new Date(0);
