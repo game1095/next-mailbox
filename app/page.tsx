@@ -7,6 +7,7 @@ import React, {
   FormEvent,
   useEffect,
 } from "react";
+// ✨ แก้ไข: ลบ CalendarDays ที่ไม่ได้ใช้ออก
 import {
   PlusCircle,
   Search,
@@ -22,8 +23,6 @@ import {
   X,
   BarChart2,
   Camera,
-  CalendarDays,
-  CheckCircle,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { Bar, Pie } from "react-chartjs-2";
@@ -400,6 +399,7 @@ export default function MailboxApp() {
 
   // --- Logic ---
   const sortedMailboxes = useMemo(() => {
+    // ✨ แก้ไข: เปลี่ยน 'let' เป็น 'const' ✨
     const sortableItems = [...mailboxes];
     if (sortConfig.key) {
       sortableItems.sort((a, b) => {
@@ -421,6 +421,7 @@ export default function MailboxApp() {
     }
     return sortableItems;
   }, [mailboxes, sortConfig]);
+
   const filteredMailboxes = useMemo(() => {
     if (mailboxes.length === 0) return [];
     let items = sortedMailboxes;
