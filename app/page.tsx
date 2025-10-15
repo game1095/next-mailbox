@@ -23,7 +23,6 @@ import {
   X,
   BarChart2,
   Camera,
-  CalendarDays,
   CheckCircle,
 } from "lucide-react";
 import dynamic from "next/dynamic";
@@ -402,8 +401,9 @@ export default function MailboxApp() {
 
   // --- Logic ---
   const sortedMailboxes = useMemo(() => {
-    // ✨ แก้ไข: เปลี่ยน 'let' เป็น 'const' ✨
+    // ✨ แก้ไข: เปลี่ยน 'let' เป็น 'const'
     const sortableItems = [...mailboxes];
+    // ✨ แก้ไข: เพิ่มเงื่อนไขตรวจสอบว่า sortConfig.key ไม่ใช่ null
     if (sortConfig.key) {
       sortableItems.sort((a, b) => {
         if (sortConfig.key === "lastCleaned") {
@@ -415,6 +415,7 @@ export default function MailboxApp() {
             return sortConfig.direction === "ascending" ? 1 : -1;
           return 0;
         }
+
         const valA = a[sortConfig.key];
         const valB = b[sortConfig.key];
         if (valA < valB) return sortConfig.direction === "ascending" ? -1 : 1;

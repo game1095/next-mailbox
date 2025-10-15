@@ -2,10 +2,10 @@
 
 import "leaflet/dist/leaflet.css";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
-// ✨ แก้ไข: ลบ LatLngBounds ที่ไม่ได้ใช้ออก
 import { LatLngExpression, Map } from "leaflet";
 import L from "leaflet";
-import { useEffect, useRef, useMemo } from "react"; // เพิ่ม useMemo
+// ✨ แก้ไข: ลบ useMemo ที่ไม่ได้ใช้ออก
+import { useEffect, useRef } from "react";
 
 // Interface
 interface Mailbox {
@@ -32,7 +32,6 @@ const smallRedIcon = new L.Icon({
   shadowSize: [21, 21],
 });
 
-// ✨ แก้ไข: ย้าย defaultPosition และ defaultZoom ออกมานอก Component
 const defaultPosition: LatLngExpression = [15.7, 100.12];
 const defaultZoom = 8;
 
@@ -54,7 +53,7 @@ const MailboxMap = ({ mailboxes }: MailboxMapProps) => {
     } else {
       map.flyTo(defaultPosition, defaultZoom);
     }
-  }, [mailboxes]); // ✨ แก้ไข: ลบ dependency ที่ไม่จำเป็นออก
+  }, [mailboxes]);
 
   return (
     <MapContainer
