@@ -1,15 +1,18 @@
 import { supabase } from "@/lib/supabaseClient";
-// Import NextRequest เข้ามาด้วย
 import { NextResponse, NextRequest } from "next/server";
 
-// export const runtime = "nodejs"; // <-- ลบบรรทัดนี้ออก
+// กำหนด Type ของ context ให้ชัดเจน
+type RouteContext = {
+  params: {
+    id: string;
+  };
+};
 
-export async function PUT(
-  request: NextRequest, // <-- ใช้ NextRequest เหมือนเดิม
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: NextRequest, context: RouteContext) {
   try {
-    const id = params.id;
+    // ดึง id ออกมาจาก context.params
+    const { id } = context.params;
+
     const body = await request.json();
     const { id: bodyId, created_at, cleaningHistory, ...updateData } = body;
 
