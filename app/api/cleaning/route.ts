@@ -59,12 +59,16 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json(data);
-  } catch (error: any) {
-    // ✨ แก้ไข: ระบุ Type ของ error เป็น any เพื่อให้ Build ผ่าน
+  } catch (error) {
+    // <-- ใน TypeScript สมัยใหม่ error จะเป็นไทป์ unknown โดยอัตโนมัติ
+    let errorMessage = "An unknown error occurred";
+
+    // ตรวจสอบก่อนว่า error เป็น instance ของ Error หรือไม่
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    }
+
     console.error("Cleaning API Error:", error);
-    return NextResponse.json(
-      { error: error.message || "An unknown error occurred" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

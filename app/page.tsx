@@ -21,8 +21,6 @@ import {
   BarChart2,
   Camera,
   CheckCircle,
-  Sun,
-  Moon,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { Bar, Pie } from "react-chartjs-2";
@@ -38,7 +36,6 @@ import {
 } from "chart.js";
 import imageCompression from "browser-image-compression";
 import Image from "next/image";
-import { useTheme } from "next-themes";
 
 ChartJS.register(
   CategoryScale,
@@ -203,78 +200,60 @@ const formatDateToThai = (date: Date) => {
 const MailboxMap = dynamic(() => import("@/components/MailboxMap"), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-full flex justify-center items-center bg-slate-50 dark:bg-slate-800">
+    <div className="w-full h-full flex justify-center items-center bg-slate-50">
       <p className="text-slate-500">กำลังโหลดแผนที่...</p>
     </div>
   ),
 });
 
 // --- Dashboard Component ---
-const Dashboard = ({ mailboxes }: { mailboxes: Mailbox[] }) => {
-  const [barChartJurisdictionFilter, setBarChartJurisdictionFilter] =
+const Dashboard = ({
+  mailboxes,
+  jurisdictions,
+}: {
+  mailboxes: Mailbox[];
+  jurisdictions: string[];
+}) => {
+  const [dashboardJurisdictionFilter, setDashboardJurisdictionFilter] =
     useState<string>("");
-  const [barChartPostOfficeFilter, setBarChartPostOfficeFilter] =
-    useState<string>("");
-  const { resolvedTheme } = useTheme();
-  const isDarkMode = resolvedTheme === "dark";
-
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: { legend: { display: false } },
     scales: {
-      y: {
-        beginAtZero: true,
-        ticks: { precision: 0, color: isDarkMode ? "#94a3b8" : "#64748b" },
-        grid: { color: isDarkMode ? "#334155" : "#e2e8f0" },
-      },
-      x: {
-        ticks: { color: isDarkMode ? "#94a3b8" : "#64748b" },
-        grid: { display: false },
-      },
+      y: { beginAtZero: true, ticks: { precision: 0 } },
+      x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 } },
     },
   };
   const pieChartOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: "top" as const,
-        labels: { color: isDarkMode ? "#cbd5e1" : "#334155" },
-      },
-    },
+    plugins: { legend: { position: "top" as const } },
   };
 
-  const barChartData = useMemo(() => {
-    let filtered = [...mailboxes];
-    if (barChartJurisdictionFilter)
-      filtered = filtered.filter(
-        (m) => m.jurisdiction === barChartJurisdictionFilter
-      );
-    if (barChartPostOfficeFilter)
-      filtered = filtered.filter(
-        (m) => m.postOffice === barChartPostOfficeFilter
-      );
+  const postOfficeData = useMemo(() => {
+    const filtered = dashboardJurisdictionFilter
+      ? mailboxes.filter((m) => m.jurisdiction === dashboardJurisdictionFilter)
+      : mailboxes;
     const counts = filtered.reduce((acc, { postOffice }) => {
       acc[postOffice] = (acc[postOffice] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
-    const sortedCounts = Object.entries(counts).sort((a, b) => b[1] - a[1]);
     return {
-      labels: sortedCounts.map((item) => item[0]),
+      labels: Object.keys(counts),
       datasets: [
         {
           label: "จำนวนตู้",
-          data: sortedCounts.map((item) => item[1]),
+          data: Object.values(counts),
           backgroundColor: "rgba(56, 189, 248, 0.6)",
           borderColor: "rgba(14, 165, 233, 1)",
           borderWidth: 1,
         },
       ],
     };
-  }, [mailboxes, barChartJurisdictionFilter, barChartPostOfficeFilter]);
+  }, [mailboxes, dashboardJurisdictionFilter]);
 
-  const pieChartData = useMemo(() => {
+  const jurisdictionData = useMemo(() => {
     const counts = mailboxes.reduce((acc, { jurisdiction }) => {
       acc[jurisdiction] = (acc[jurisdiction] || 0) + 1;
       return acc;
@@ -295,57 +274,48 @@ const Dashboard = ({ mailboxes }: { mailboxes: Mailbox[] }) => {
             "rgba(14, 165, 233, 0.7)",
             "rgba(99, 102, 241, 0.7)",
           ],
-          borderColor: isDarkMode ? "#1e293b" : "#ffffff",
+          borderColor: "#ffffff",
           borderWidth: 2,
         },
       ],
     };
-  }, [mailboxes, isDarkMode]);
+  }, [mailboxes]);
 
   return (
-    <div className="grid grid-cols-5 gap-6">
-      <div className="col-span-5 lg:col-span-3 bg-white dark:bg-slate-800 rounded-lg shadow-lg p-4 sm:p-6 flex flex-col">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-          <h3 className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-            <BarChart2 size={18} /> จำนวนตู้ไปรษณีย์
+    <div className="bg-white rounded-lg border border-slate-200 p-4 space-y-4">
+      <div className="flex justify-between items-center">
+        <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+          <BarChart2 size={18} /> Dashboard
+        </h2>
+        <select
+          value={dashboardJurisdictionFilter}
+          onChange={(e) => setDashboardJurisdictionFilter(e.target.value)}
+          className="p-2 border border-slate-300 rounded-md bg-white text-sm focus:ring-2 focus:ring-sky-500"
+        >
+          <option value="">กรองกราฟตามสังกัด (ทั้งหมด)</option>
+          {jurisdictions.map((j) => (
+            <option key={j} value={j}>
+              {j}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <div className="xl:col-span-2 bg-slate-50 border border-slate-200 rounded-lg p-4">
+          <h3 className="font-semibold text-slate-700 text-center">
+            จำนวนตู้ฯ แยกตามที่ทำการ
           </h3>
-          <div className="flex gap-2 w-full sm:w-auto">
-            <select
-              value={barChartJurisdictionFilter}
-              onChange={(e) => setBarChartJurisdictionFilter(e.target.value)}
-              className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-sm focus:ring-2 focus:ring-sky-500"
-            >
-              <option value="">ทุกสังกัด</option>
-              {JURISDICTIONS.map((j) => (
-                <option key={j} value={j}>
-                  {j}
-                </option>
-              ))}
-            </select>
-            <select
-              value={barChartPostOfficeFilter}
-              onChange={(e) => setBarChartPostOfficeFilter(e.target.value)}
-              className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-sm focus:ring-2 focus:ring-sky-500"
-            >
-              <option value="">ทุกที่ทำการ</option>
-              {POST_OFFICES.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
-            </select>
+          <div className="relative h-80 mt-4">
+            <Bar options={chartOptions} data={postOfficeData} />
           </div>
         </div>
-        <div className="relative h-80 flex-grow">
-          <Bar options={chartOptions} data={barChartData} />
-        </div>
-      </div>
-      <div className="col-span-5 lg:col-span-2 bg-white dark:bg-slate-800 rounded-lg shadow-lg p-4 sm:p-6 flex flex-col">
-        <h3 className="font-semibold text-slate-800 dark:text-slate-200 text-center">
-          สัดส่วนตู้ฯ แยกตามสังกัด
-        </h3>
-        <div className="relative h-80 flex-grow mt-4">
-          <Pie options={pieChartOptions} data={pieChartData} />
+        <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+          <h3 className="font-semibold text-slate-700 text-center">
+            สัดส่วนตู้ฯ แยกตามสังกัด
+          </h3>
+          <div className="relative h-80 mt-4">
+            <Pie options={pieChartOptions} data={jurisdictionData} />
+          </div>
         </div>
       </div>
     </div>
@@ -375,26 +345,6 @@ const Toast = ({
   );
 };
 
-// --- Theme Toggle Component ---
-const ThemeToggle = () => {
-  const { theme, setTheme } = useTheme();
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => setIsMounted(true), []);
-
-  if (!isMounted) return <div style={{ width: "36px", height: "36px" }} />;
-
-  return (
-    <button
-      onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-      className="p-2 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-      aria-label="Toggle theme"
-    >
-      {theme === "light" ? <Moon size={20} /> : <Sun size={20} />}
-    </button>
-  );
-};
-
 export default function MailboxApp() {
   // --- States ---
   const [mailboxes, setMailboxes] = useState<Mailbox[]>([]);
@@ -415,6 +365,7 @@ export default function MailboxApp() {
   const showToast = useCallback((message: string) => {
     setToast({ show: true, message });
   }, []);
+
   const fetchMailboxes = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -476,7 +427,7 @@ export default function MailboxApp() {
   const [reportDate, setReportDate] = useState<string>("");
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [fullImageUrl, setFullImageUrl] = useState("");
-  const ITEMS_PER_PAGE = 5;
+  const ITEMS_PER_PAGE = 10;
 
   // --- Logic ---
   const filteredMailboxes = useMemo(() => {
@@ -698,309 +649,781 @@ export default function MailboxApp() {
     setFullImageUrl("");
   };
   const getDateHighlightClass = (date?: Date) => {
-    if (!date)
-      return "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300";
+    if (!date) return "bg-red-100 text-red-700";
     const today = new Date();
     const lastCleaned = new Date(date);
     today.setHours(0, 0, 0, 0);
     lastCleaned.setHours(0, 0, 0, 0);
     const diffTime = today.getTime() - lastCleaned.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    if (diffDays > 90)
-      return "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300";
-    else
-      return "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300";
+    if (diffDays > 90) return "bg-red-100 text-red-700";
+    else return "bg-green-100 text-green-700";
   };
 
   if (isLoading || !isClient) {
     return (
-      <div className="w-screen h-screen bg-white dark:bg-slate-900 flex items-center justify-center">
-        <p className="text-slate-500 animate-pulse">กำลังโหลดข้อมูล...</p>
+      <div className="w-screen h-screen bg-slate-50 flex items-center justify-center">
+        <p className="text-slate-500 animate-pulse">กำลังโหลด...</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 min-h-screen">
+    <div className="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
       {toast.show && (
         <Toast
           message={toast.message}
           onClose={() => setToast({ show: false, message: "" })}
         />
       )}
-      <main className="container mx-auto p-4 md:p-6 lg:p-8 space-y-6">
-        <header className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
-              Mailbox System
-            </h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-1">
-              ระบบบันทึกข้อมูลตู้ไปรษณีย์
-            </p>
-          </div>
-          <ThemeToggle />
+      <main className="flex-grow container mx-auto p-4 md:p-6 lg:p-8 space-y-6">
+        <header>
+          <h1 className="text-3xl font-bold text-slate-900">
+            ระบบบันทึกข้อมูลตู้ไปรษณีย์
+          </h1>
+          <p className="text-slate-500 mt-1">
+            Mailbox Information Management System
+          </p>
         </header>
 
-        <div className="grid grid-cols-5 gap-6">
-          <div className="col-span-5 lg:col-span-3 bg-white dark:bg-slate-800 rounded-lg shadow-lg p-4 sm:p-6 flex flex-col h-[700px]">
-            <div className="flex flex-col xl:flex-row justify-between items-center gap-4 mb-4">
-              <div className="w-full flex-grow flex flex-col sm:flex-row gap-2">
-                <div className="relative flex-grow">
-                  <Search
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                    size={18}
+        <div className="flex flex-col xl:flex-row justify-between items-center gap-4">
+          <div className="w-full flex-grow flex flex-col sm:flex-row gap-2">
+            <div className="relative flex-grow">
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                size={18}
+              />
+              <input
+                type="text"
+                placeholder="ค้นหา..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-white border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition"
+              />
+            </div>
+            <select
+              value={jurisdictionFilter}
+              onChange={(e) => setJurisdictionFilter(e.target.value)}
+              className="w-full sm:w-1/3 xl:w-auto p-2 border border-slate-300 rounded-md bg-white focus:ring-2 focus:ring-sky-500"
+            >
+              <option value="">ทุกสังกัด</option>
+              {JURISDICTIONS.map((j) => (
+                <option key={j} value={j}>
+                  {j}
+                </option>
+              ))}
+            </select>
+            <div className="relative w-full sm:w-1/3 xl:w-auto">
+              <input
+                type="text"
+                list="post-offices-list"
+                placeholder="ทุกที่ทำการ"
+                value={postOfficeFilter}
+                onChange={(e) => setPostOfficeFilter(e.target.value)}
+                className="w-full p-2 pr-8 border border-slate-300 rounded-md bg-white focus:ring-2 focus:ring-sky-500"
+              />
+              <datalist id="post-offices-list">
+                {POST_OFFICES.map((po) => (
+                  <option key={po} value={po} />
+                ))}
+              </datalist>
+              {postOfficeFilter && (
+                <button
+                  onClick={() => setPostOfficeFilter("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={() => openFormModal("add")}
+            className="w-full xl:w-auto flex-shrink-0 flex items-center justify-center gap-2 bg-slate-800 text-white font-semibold px-5 py-2 rounded-md hover:bg-slate-700 transition"
+          >
+            <PlusCircle size={16} />
+            เพิ่มข้อมูล
+          </button>
+        </div>
+
+        <div className="flex flex-col lg:flex-row gap-6">
+          <div className="lg:w-3/5 w-full flex flex-col">
+            <div className="bg-white rounded-lg border border-slate-200 overflow-hidden flex-grow flex flex-col">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      <th className="px-4 py-3 w-4">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+                          onChange={(e) =>
+                            handleSelectAllFiltered(e.target.checked)
+                          }
+                          checked={
+                            filteredMailboxes.length > 0 &&
+                            selectedMapMailboxes.length ===
+                              filteredMailboxes.length
+                          }
+                        />
+                      </th>
+                      <th className="px-4 py-3 text-left font-semibold text-slate-600">
+                        ที่ทำการฯ
+                      </th>
+                      <th className="px-4 py-3 text-left font-semibold text-slate-600">
+                        จุดสังเกต
+                      </th>
+                      <th className="px-4 py-3 text-left font-semibold text-slate-600">
+                        สังกัด
+                      </th>
+                      <th className="px-4 py-3 text-left font-semibold text-slate-600">
+                        ล่าสุด
+                      </th>
+                      <th className="px-4 py-3 text-center font-semibold text-slate-600">
+                        จัดการ
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {paginatedMailboxes.map((mailbox) => {
+                      const latestCleaningDate =
+                        mailbox.cleaningHistory[0]?.date;
+                      return (
+                        <tr
+                          key={mailbox.id}
+                          className="hover:bg-slate-50 transition-colors"
+                        >
+                          <td className="px-4 py-3">
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+                              checked={selectedMapMailboxes.some(
+                                (item) => item.id === mailbox.id
+                              )}
+                              onChange={(e) =>
+                                handleMapSelectionChange(
+                                  mailbox,
+                                  e.target.checked
+                                )
+                              }
+                            />
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-slate-800 font-medium">
+                            {mailbox.postOffice}
+                          </td>
+                          <td className="px-4 py-3 text-slate-500 min-w-[200px]">
+                            {mailbox.landmark}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-slate-500">
+                            {mailbox.jurisdiction}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-slate-500">
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${getDateHighlightClass(
+                                latestCleaningDate
+                              )}`}
+                            >
+                              {latestCleaningDate
+                                ? formatDateToThai(latestCleaningDate)
+                                : "ไม่มีข้อมูล"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <div className="flex justify-center items-center gap-2">
+                              <button
+                                onClick={() => openDetailModal(mailbox)}
+                                className="p-1.5 text-slate-500 hover:text-sky-600"
+                                title="ดูรายละเอียด"
+                              >
+                                <Eye size={16} />
+                              </button>
+                              <button
+                                onClick={() => openFormModal("edit", mailbox)}
+                                className="p-1.5 text-slate-500 hover:text-sky-600"
+                                title="แก้ไขข้อมูล"
+                              >
+                                <Pencil size={16} />
+                              </button>
+                              <button
+                                onClick={() => openReportModal(mailbox.id)}
+                                className="p-1.5 text-slate-500 hover:text-sky-600"
+                                title="รายงานผลการทำความสะอาด"
+                              >
+                                <Camera size={16} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              {totalPages > 0 && (
+                <div className="flex items-center justify-between border-t border-slate-200 bg-white px-4 py-3 mt-auto">
+                  <div>
+                    <p className="text-sm text-slate-500">
+                      แสดง{" "}
+                      <span className="font-semibold text-slate-700">
+                        {(currentPage - 1) * ITEMS_PER_PAGE + 1}
+                      </span>
+                      -{" "}
+                      <span className="font-semibold text-slate-700">
+                        {Math.min(
+                          currentPage * ITEMS_PER_PAGE,
+                          filteredMailboxes.length
+                        )}
+                      </span>{" "}
+                      จาก{" "}
+                      <span className="font-semibold text-slate-700">
+                        {filteredMailboxes.length}
+                      </span>
+                    </p>
+                  </div>
+                  {totalPages > 1 && (
+                    <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm border border-slate-300">
+                      <button
+                        onClick={() =>
+                          setCurrentPage((p) => Math.max(1, p - 1))
+                        }
+                        disabled={currentPage === 1}
+                        className="relative inline-flex items-center rounded-l-md px-2 py-2 text-slate-400 hover:bg-slate-50 disabled:opacity-50"
+                      >
+                        <ChevronLeft className="h-5 w-5" />
+                      </button>
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                        (page) => (
+                          <button
+                            key={page}
+                            onClick={() => setCurrentPage(page)}
+                            className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
+                              currentPage === page
+                                ? "z-10 bg-sky-50 border-sky-500 text-sky-600"
+                                : "text-slate-700 hover:bg-slate-50"
+                            }`}
+                          >
+                            {page}
+                          </button>
+                        )
+                      )}
+                      <button
+                        onClick={() =>
+                          setCurrentPage((p) => Math.min(totalPages, p + 1))
+                        }
+                        disabled={currentPage === totalPages}
+                        className="relative inline-flex items-center rounded-r-md px-2 py-2 text-slate-400 hover:bg-slate-50 disabled:opacity-50"
+                      >
+                        <ChevronRight className="h-5 w-5" />
+                      </button>
+                    </nav>
+                  )}
+                </div>
+              )}
+              {filteredMailboxes.length === 0 && (
+                <p className="text-center text-slate-500 p-12">ไม่พบข้อมูล</p>
+              )}
+            </div>
+          </div>
+          <div
+            className={`lg:w-2/5 w-full relative transition-all duration-300 ${
+              isFormModalOpen || isDetailModalOpen || isReportModalOpen
+                ? "z-0"
+                : "z-10"
+            }`}
+          >
+            <div className="bg-white rounded-lg border border-slate-200 overflow-hidden p-4 space-y-4 h-full">
+              <h2 className="text-lg font-semibold text-slate-800">
+                แผนที่แสดงผล ({selectedMapMailboxes.length} รายการ)
+              </h2>
+              <div className="w-full h-full min-h-[500px] rounded-md overflow-hidden border border-slate-200">
+                <MailboxMap mailboxes={selectedMapMailboxes} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <Dashboard mailboxes={mailboxes} jurisdictions={JURISDICTIONS} />
+      </main>
+
+      <footer className="mt-auto">
+        <div className="container mx-auto px-4 sm:px-6 py-6 flex justify-between items-center text-sm text-slate-500 border-t border-slate-200">
+          <p className="flex items-center justify-center gap-1.5">
+            Made with <span className="text-red-500">❤️</span> by Megamind
+          </p>
+          <a
+            href="https://github.com/game1095/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-slate-900 transition-colors"
+            aria-label="GitHub Repository"
+          >
+            <Github size={20} />
+          </a>
+        </div>
+      </footer>
+
+      {isFormModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
+          {" "}
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col transform transition-all animate-scale-in">
+            {" "}
+            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-200">
+              {" "}
+              <h2 className="text-lg font-semibold text-slate-800">
+                {formMode === "add"
+                  ? "เพิ่มข้อมูลตู้ไปรษณีย์"
+                  : "แก้ไขข้อมูลตู้ไปรษณีย์"}
+              </h2>{" "}
+              <button
+                onClick={closeFormModal}
+                className="p-1 rounded-full text-slate-400 hover:bg-slate-100"
+              >
+                <X size={18} />
+              </button>{" "}
+            </div>{" "}
+            <form
+              onSubmit={handleFormSubmit}
+              className="p-6 space-y-4 overflow-y-auto"
+            >
+              {" "}
+              <div className="grid sm:grid-cols-2 gap-4">
+                {" "}
+                <div>
+                  <label className="block text-sm font-medium text-slate-600 mb-1">
+                    ที่ทำการไปรษณีย์
+                  </label>
+                  <input
+                    name="postOffice"
+                    type="text"
+                    list="form-post-offices-list"
+                    value={currentFormData.postOffice}
+                    onChange={handleFormInputChange}
+                    className="w-full p-2 border border-slate-300 rounded-md"
+                    required
                   />
+                  <datalist id="form-post-offices-list">
+                    {POST_OFFICES.map((po) => (
+                      <option key={po} value={po} />
+                    ))}
+                  </datalist>
+                </div>{" "}
+                <div>
+                  <label className="block text-sm font-medium text-slate-600 mb-1">
+                    รหัสไปรษณีย์
+                  </label>
                   <input
                     type="text"
-                    placeholder="ค้นหา..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition"
+                    name="postalCode"
+                    value={currentFormData.postalCode}
+                    onChange={handleFormInputChange}
+                    maxLength={5}
+                    placeholder="5 หลัก"
+                    className="w-full p-2 border border-slate-300 rounded-md"
+                    required
                   />
-                </div>
+                </div>{" "}
+              </div>{" "}
+              <div>
+                <label className="block text-sm font-medium text-slate-600 mb-1">
+                  สังกัด
+                </label>
                 <select
-                  value={jurisdictionFilter}
-                  onChange={(e) => setJurisdictionFilter(e.target.value)}
-                  className="w-full sm:w-auto p-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-sm focus:ring-2 focus:ring-sky-500"
+                  name="jurisdiction"
+                  value={currentFormData.jurisdiction}
+                  onChange={handleFormInputChange}
+                  className="w-full p-2 border border-slate-300 rounded-md"
                 >
-                  <option value="">ทุกสังกัด</option>
+                  <option value="">-- เลือก --</option>
                   {JURISDICTIONS.map((j) => (
                     <option key={j} value={j}>
                       {j}
                     </option>
                   ))}
                 </select>
-                <select
-                  value={postOfficeFilter}
-                  onChange={(e) => setPostOfficeFilter(e.target.value)}
-                  className="w-full sm:w-auto p-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-sm focus:ring-2 focus:ring-sky-500"
-                >
-                  <option value="">ทุกที่ทำการ</option>
-                  {POST_OFFICES.map((p) => (
-                    <option key={p} value={p}>
-                      {p}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="flex-grow overflow-y-auto">
-              <table className="w-full text-sm">
-                <thead className="sticky top-0 bg-slate-50 dark:bg-slate-700">
-                  <tr>
-                    <th className="px-4 py-3 w-4">
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 rounded border-slate-300 dark:border-slate-500 text-sky-600 focus:ring-sky-500"
-                        onChange={(e) =>
-                          handleSelectAllFiltered(e.target.checked)
-                        }
-                        checked={
-                          filteredMailboxes.length > 0 &&
-                          selectedMapMailboxes.length ===
-                            filteredMailboxes.length
-                        }
-                      />
-                    </th>
-                    <th className="px-4 py-3 text-left font-semibold text-slate-600 dark:text-slate-300">
-                      ที่ทำการฯ
-                    </th>
-                    <th className="px-4 py-3 text-left font-semibold text-slate-600 dark:text-slate-300">
-                      จุดสังเกต
-                    </th>
-                    <th className="px-4 py-3 text-left font-semibold text-slate-600 dark:text-slate-300">
-                      สังกัด
-                    </th>
-                    <th className="px-4 py-3 text-left font-semibold text-slate-600 dark:text-slate-300">
-                      ล่าสุด
-                    </th>
-                    <th className="px-4 py-3 text-center font-semibold text-slate-600 dark:text-slate-300">
-                      จัดการ
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                  {paginatedMailboxes.map((mailbox) => {
-                    const latestCleaningDate = mailbox.cleaningHistory[0]?.date;
-                    return (
-                      <tr
-                        key={mailbox.id}
-                        className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
-                      >
-                        <td className="px-4 py-3">
-                          <input
-                            type="checkbox"
-                            className="h-4 w-4 rounded border-slate-300 dark:border-slate-500 text-sky-600 focus:ring-sky-500"
-                            checked={selectedMapMailboxes.some(
-                              (item) => item.id === mailbox.id
-                            )}
-                            onChange={(e) =>
-                              handleMapSelectionChange(
-                                mailbox,
-                                e.target.checked
-                              )
-                            }
-                          />
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-slate-800 dark:text-slate-200 font-medium">
-                          {mailbox.postOffice}
-                        </td>
-                        <td className="px-4 py-3 text-slate-500 dark:text-slate-400 min-w-[200px]">
-                          {mailbox.landmark}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-slate-500 dark:text-slate-400">
-                          {mailbox.jurisdiction}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          <span
-                            className={`px-2 py-1 rounded-md text-xs font-medium ${getDateHighlightClass(
-                              latestCleaningDate
-                            )}`}
-                          >
-                            {latestCleaningDate
-                              ? formatDateToThai(latestCleaningDate)
-                              : "ไม่มีข้อมูล"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          <div className="flex justify-center items-center gap-2">
-                            <button
-                              onClick={() => openDetailModal(mailbox)}
-                              className="p-1.5 text-slate-500 hover:text-sky-600"
-                              title="ดูรายละเอียด"
-                            >
-                              <Eye size={16} />
-                            </button>
-                            <button
-                              onClick={() => openFormModal("edit", mailbox)}
-                              className="p-1.5 text-slate-500 hover:text-sky-600"
-                              title="แก้ไขข้อมูล"
-                            >
-                              <Pencil size={16} />
-                            </button>
-                            <button
-                              onClick={() => openReportModal(mailbox.id)}
-                              className="p-1.5 text-slate-500 hover:text-sky-600"
-                              title="รายงานผลการทำความสะอาด"
-                            >
-                              <Camera size={16} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-            {totalPages > 0 && (
-              <div className="flex items-center justify-between border-t border-slate-200 dark:border-slate-700 px-4 py-3 mt-auto">
-                <div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
-                    แสดง{" "}
-                    <span className="font-semibold text-slate-700 dark:text-slate-300">
-                      {(currentPage - 1) * ITEMS_PER_PAGE + 1}
-                    </span>
-                    -{" "}
-                    <span className="font-semibold text-slate-700 dark:text-slate-300">
-                      {Math.min(
-                        currentPage * ITEMS_PER_PAGE,
-                        filteredMailboxes.length
-                      )}
-                    </span>{" "}
-                    จาก{" "}
-                    <span className="font-semibold text-slate-700 dark:text-slate-300">
-                      {filteredMailboxes.length}
-                    </span>
+              </div>{" "}
+              <div>
+                <label className="block text-sm font-medium text-slate-600 mb-1">
+                  จุดสังเกตที่ตั้ง
+                </label>
+                <textarea
+                  name="landmark"
+                  value={currentFormData.landmark}
+                  onChange={handleFormInputChange}
+                  rows={3}
+                  className="w-full p-2 border border-slate-300 rounded-md"
+                  required
+                ></textarea>
+              </div>{" "}
+              <div>
+                {" "}
+                <label className="block text-sm font-medium text-slate-600 mb-1">
+                  จุดพิกัด
+                </label>{" "}
+                <div className="flex flex-col sm:flex-row items-center gap-2">
+                  {" "}
+                  <input
+                    type="number"
+                    step="any"
+                    name="lat"
+                    value={currentFormData.lat}
+                    onChange={handleFormInputChange}
+                    placeholder="ละติจูด"
+                    className="w-full p-2 border border-slate-300 rounded-md"
+                    required
+                  />{" "}
+                  <input
+                    type="number"
+                    step="any"
+                    name="lng"
+                    value={currentFormData.lng}
+                    onChange={handleFormInputChange}
+                    placeholder="ลองจิจูด"
+                    className="w-full p-2 border border-slate-300 rounded-md"
+                    required
+                  />{" "}
+                  <button
+                    type="button"
+                    onClick={getCurrentLocation}
+                    className="w-full sm:w-auto flex-shrink-0 flex items-center justify-center gap-2 bg-slate-100 text-slate-600 font-medium px-4 py-2 rounded-md hover:bg-slate-200"
+                  >
+                    <MapPin size={16} /> พิกัด
+                  </button>{" "}
+                </div>{" "}
+                {locationStatus && (
+                  <p className="text-xs text-slate-500 mt-2">
+                    {locationStatus}
                   </p>
-                </div>
-                {totalPages > 1 && (
-                  <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm border border-slate-300 dark:border-slate-600">
-                    <button
-                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                      disabled={currentPage === 1}
-                      className="relative inline-flex items-center rounded-l-md px-2 py-2 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50"
-                    >
-                      <ChevronLeft className="h-5 w-5" />
-                    </button>
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                      (page) => (
-                        <button
-                          key={page}
-                          onClick={() => setCurrentPage(page)}
-                          className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
-                            currentPage === page
-                              ? "z-10 bg-sky-50 dark:bg-sky-900/50 border-sky-500 text-sky-600 dark:text-sky-400"
-                              : "text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
-                          }`}
-                        >
-                          {page}
-                        </button>
-                      )
-                    )}
-                    <button
-                      onClick={() =>
-                        setCurrentPage((p) => Math.min(totalPages, p + 1))
-                      }
-                      disabled={currentPage === totalPages}
-                      className="relative inline-flex items-center rounded-r-md px-2 py-2 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50"
-                    >
-                      <ChevronRight className="h-5 w-5" />
-                    </button>
-                  </nav>
-                )}
-              </div>
-            )}
-            {filteredMailboxes.length === 0 && (
-              <p className="text-center text-slate-500 p-12 flex-grow flex items-center justify-center">
-                ไม่พบข้อมูล
-              </p>
-            )}
-          </div>
-
-          <div className="col-span-5 lg:col-span-2 bg-white dark:bg-slate-800 rounded-lg shadow-lg p-4 h-[700px] flex flex-col">
-            <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">
-              แผนที่แสดงผล ({selectedMapMailboxes.length} รายการ)
-            </h2>
-            <div className="w-full flex-grow rounded-md overflow-hidden border border-slate-200 dark:border-slate-700">
-              <MailboxMap mailboxes={selectedMapMailboxes} />
-            </div>
-          </div>
-        </div>
-
-        <Dashboard mailboxes={mailboxes} />
-
-        <div className="col-span-5 bg-white dark:bg-slate-800 rounded-lg shadow-lg p-4">
-          <div className="flex justify-between items-center text-sm text-slate-500 dark:text-slate-400">
-            <p className="flex items-center justify-center gap-1.5">
-              Made with <span className="text-red-500">❤️</span> by Megamind
-            </p>
-            <a
-              href="https://github.com/game1095/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-slate-900 dark:hover:text-white transition-colors"
-            >
-              <Github size={20} />
-            </a>
-          </div>
-        </div>
-      </main>
-
-      {isFormModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
-          {/* ... Form Modal ... */}
+                )}{" "}
+              </div>{" "}
+              <div className="flex justify-end gap-2 pt-4 border-t border-slate-200">
+                {" "}
+                <button
+                  type="button"
+                  onClick={closeFormModal}
+                  className="px-5 py-2 bg-slate-200 text-slate-800 font-semibold rounded-md hover:bg-slate-300"
+                >
+                  ยกเลิก
+                </button>{" "}
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-slate-800 text-white font-semibold rounded-md hover:bg-slate-700"
+                >
+                  บันทึก
+                </button>{" "}
+              </div>{" "}
+            </form>{" "}
+          </div>{" "}
         </div>
       )}
       {isDetailModalOpen && selectedMailbox && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
-          {/* ... Detail Modal ... */}
+          {" "}
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] flex flex-col transform transition-all animate-scale-in">
+            {" "}
+            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-200">
+              {" "}
+              <h2 className="text-lg font-semibold text-slate-800">
+                รายละเอียดตู้ไปรษณีย์
+              </h2>{" "}
+              <button
+                onClick={closeDetailModal}
+                className="p-1 rounded-full text-slate-400 hover:bg-slate-100"
+              >
+                <X size={18} />
+              </button>{" "}
+            </div>{" "}
+            <div className="p-6 overflow-y-auto">
+              {" "}
+              <div className="grid lg:grid-cols-2 gap-6">
+                {" "}
+                <div className="space-y-4">
+                  {" "}
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-500">
+                      ที่ทำการไปรษณีย์
+                    </h3>
+                    <p className="text-base text-slate-900">
+                      {selectedMailbox.postOffice} ({selectedMailbox.postalCode}
+                      )
+                    </p>
+                  </div>{" "}
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-500">
+                      สังกัด
+                    </h3>
+                    <p className="text-base text-slate-900">
+                      {selectedMailbox.jurisdiction}
+                    </p>
+                  </div>{" "}
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-500">
+                      จุดสังเกต
+                    </h3>
+                    <p className="text-base text-slate-900">
+                      {selectedMailbox.landmark}
+                    </p>
+                  </div>{" "}
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-500">
+                      พิกัด
+                    </h3>
+                    <p className="text-base text-slate-900 font-mono">
+                      {selectedMailbox.lat}, {selectedMailbox.lng}
+                    </p>
+                  </div>{" "}
+                </div>{" "}
+                <div>
+                  {" "}
+                  <h3 className="text-sm font-semibold text-slate-500 mb-2">
+                    ตำแหน่งบนแผนที่
+                  </h3>{" "}
+                  <div className="w-full h-96 rounded-md overflow-hidden border border-slate-200">
+                    {" "}
+                    <iframe
+                      width="100%"
+                      height="100%"
+                      loading="lazy"
+                      allowFullScreen
+                      src={`https://www.google.com/maps?q=${selectedMailbox.lat},${selectedMailbox.lng}&hl=th&z=15&output=embed`}
+                    ></iframe>{" "}
+                  </div>{" "}
+                </div>{" "}
+              </div>{" "}
+              <div className="pt-6 mt-6 border-t border-slate-200">
+                {" "}
+                <h3 className="text-lg font-semibold text-slate-800 mb-4">
+                  ประวัติการทำความสะอาด
+                </h3>{" "}
+                {selectedMailbox.cleaningHistory.length === 0 ? (
+                  <p className="text-slate-500">ยังไม่มีประวัติ</p>
+                ) : (
+                  <div className="overflow-x-auto rounded-lg border border-slate-200">
+                    {" "}
+                    <table className="w-full text-sm">
+                      {" "}
+                      <thead className="bg-slate-50">
+                        {" "}
+                        <tr>
+                          {" "}
+                          <th className="px-4 py-2 text-left font-semibold text-slate-600 w-12">
+                            ลำดับ
+                          </th>{" "}
+                          <th className="px-4 py-2 text-left font-semibold text-slate-600">
+                            วันที่
+                          </th>{" "}
+                          <th className="px-4 py-2 text-center font-semibold text-slate-600">
+                            ก่อนทำ
+                          </th>{" "}
+                          <th className="px-4 py-2 text-center font-semibold text-slate-600">
+                            หลังทำ
+                          </th>{" "}
+                          <th className="px-4 py-2 text-left font-semibold text-slate-600">
+                            ผู้รับผิดชอบ
+                          </th>{" "}
+                        </tr>{" "}
+                      </thead>{" "}
+                      <tbody className="divide-y divide-slate-200">
+                        {" "}
+                        {selectedMailbox.cleaningHistory.map(
+                          (record, index) => (
+                            <tr key={index} className="hover:bg-slate-50">
+                              {" "}
+                              <td className="px-4 py-3 whitespace-nowrap text-slate-800 font-medium">
+                                {index + 1}
+                              </td>{" "}
+                              <td className="px-4 py-3 whitespace-nowrap text-slate-500">
+                                {formatDateToThai(record.date)}
+                              </td>{" "}
+                              <td className="px-4 py-3 text-center">
+                                {" "}
+                                {record.beforeCleanImage ? (
+                                  <Image
+                                    src={record.beforeCleanImage}
+                                    alt="Before"
+                                    width={64}
+                                    height={64}
+                                    className="w-16 h-16 object-cover rounded-md cursor-pointer mx-auto border"
+                                    onClick={() =>
+                                      openImageModal(
+                                        record.beforeCleanImage as string
+                                      )
+                                    }
+                                  />
+                                ) : (
+                                  <span className="text-slate-400">-</span>
+                                )}{" "}
+                              </td>{" "}
+                              <td className="px-4 py-3 text-center">
+                                {" "}
+                                {record.afterCleanImage ? (
+                                  <Image
+                                    src={record.afterCleanImage}
+                                    alt="After"
+                                    width={64}
+                                    height={64}
+                                    className="w-16 h-16 object-cover rounded-md cursor-pointer mx-auto border"
+                                    onClick={() =>
+                                      openImageModal(
+                                        record.afterCleanImage as string
+                                      )
+                                    }
+                                  />
+                                ) : (
+                                  <span className="text-slate-400">-</span>
+                                )}{" "}
+                              </td>{" "}
+                              <td className="px-4 py-3 whitespace-nowrap text-slate-500">
+                                {record.cleanerName}
+                              </td>{" "}
+                            </tr>
+                          )
+                        )}{" "}
+                      </tbody>{" "}
+                    </table>{" "}
+                  </div>
+                )}{" "}
+              </div>{" "}
+            </div>{" "}
+            <div className="flex justify-end gap-2 p-4 border-t border-slate-200">
+              {" "}
+              <button
+                type="button"
+                onClick={closeDetailModal}
+                className="px-5 py-2 bg-slate-200 text-slate-800 font-semibold rounded-md hover:bg-slate-300"
+              >
+                ปิด
+              </button>{" "}
+            </div>{" "}
+          </div>{" "}
         </div>
       )}
       {isReportModalOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
-          {/* ... Report Modal ... */}
+          {" "}
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col transform transition-all animate-scale-in">
+            {" "}
+            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-200">
+              {" "}
+              <h2 className="text-lg font-semibold text-slate-800">
+                รายงานผลการทำความสะอาด
+              </h2>{" "}
+              <button
+                onClick={closeReportModal}
+                className="p-1 rounded-full text-slate-400 hover:bg-slate-100"
+              >
+                <X size={18} />
+              </button>{" "}
+            </div>{" "}
+            <form
+              onSubmit={handleReportSubmit}
+              className="p-6 space-y-4 overflow-y-auto"
+            >
+              {" "}
+              <div>
+                {" "}
+                <label className="block text-sm font-medium text-slate-600 mb-1">
+                  วันที่รายงาน
+                </label>{" "}
+                <input
+                  type="date"
+                  value={reportDate}
+                  onChange={(e) => setReportDate(e.target.value)}
+                  className="w-full p-2 border border-slate-300 rounded-md"
+                  required
+                />{" "}
+              </div>{" "}
+              <div>
+                {" "}
+                <label className="block text-sm font-medium text-slate-600 mb-1">
+                  รูปภาพก่อนทำความสะอาด
+                </label>{" "}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleImageUpload(e, "before")}
+                  className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100"
+                  required
+                />{" "}
+                {uploadProgress.before > 0 && (
+                  <div className="mt-2 w-full bg-slate-200 rounded-full h-2.5">
+                    <div
+                      className="bg-sky-500 h-2.5 rounded-full"
+                      style={{ width: `${uploadProgress.before}%` }}
+                    ></div>
+                  </div>
+                )}{" "}
+                {reportBeforeImage && (
+                  <Image
+                    src={reportBeforeImage}
+                    alt="Before Preview"
+                    width={128}
+                    height={128}
+                    className="mt-2 w-32 h-32 object-cover rounded-md border"
+                  />
+                )}{" "}
+              </div>{" "}
+              <div>
+                {" "}
+                <label className="block text-sm font-medium text-slate-600 mb-1">
+                  รูปภาพหลังทำความสะอาด
+                </label>{" "}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleImageUpload(e, "after")}
+                  className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100"
+                  required
+                />{" "}
+                {uploadProgress.after > 0 && (
+                  <div className="mt-2 w-full bg-slate-200 rounded-full h-2.5">
+                    <div
+                      className="bg-sky-500 h-2.5 rounded-full"
+                      style={{ width: `${uploadProgress.after}%` }}
+                    ></div>
+                  </div>
+                )}{" "}
+                {reportAfterImage && (
+                  <Image
+                    src={reportAfterImage}
+                    alt="After Preview"
+                    width={128}
+                    height={128}
+                    className="mt-2 w-32 h-32 object-cover rounded-md border"
+                  />
+                )}{" "}
+              </div>{" "}
+              <div>
+                {" "}
+                <label className="block text-sm font-medium text-slate-600 mb-1">
+                  ชื่อผู้รายงาน/ผู้ทำความสะอาด
+                </label>{" "}
+                <input
+                  type="text"
+                  value={reportCleanerName}
+                  onChange={(e) => setReportCleanerName(e.target.value)}
+                  className="w-full p-2 border border-slate-300 rounded-md"
+                  placeholder="เช่น ทีมงาน A, เจ้าหน้าที่ สมชาย"
+                  required
+                />{" "}
+              </div>{" "}
+              <div className="flex justify-end gap-2 pt-4 border-t border-slate-200">
+                {" "}
+                <button
+                  type="button"
+                  onClick={closeReportModal}
+                  className="px-5 py-2 bg-slate-200 text-slate-800 font-semibold rounded-md hover:bg-slate-300"
+                >
+                  ยกเลิก
+                </button>{" "}
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-slate-800 text-white font-semibold rounded-md hover:bg-slate-700"
+                >
+                  บันทึกรายงาน
+                </button>{" "}
+              </div>{" "}
+            </form>{" "}
+          </div>{" "}
         </div>
       )}
       {isImageModalOpen && fullImageUrl && (
@@ -1008,18 +1431,32 @@ export default function MailboxApp() {
           className="fixed inset-0 bg-slate-900/90 backdrop-blur-sm flex justify-center items-center z-[60] p-4"
           onClick={closeImageModal}
         >
-          {/* ... Image Modal ... */}
+          {" "}
+          <div
+            className="relative max-w-full max-h-[90vh] bg-transparent flex justify-center items-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {" "}
+            <Image
+              src={fullImageUrl}
+              alt="Full Screen"
+              width={1920}
+              height={1080}
+              className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl border-4 border-white"
+            />{" "}
+            <button
+              onClick={closeImageModal}
+              className="absolute top-4 right-4 p-2 rounded-full bg-white text-slate-800 hover:bg-slate-100 z-10"
+            >
+              <X size={24} />
+            </button>{" "}
+          </div>{" "}
         </div>
       )}
 
       <style
         dangerouslySetInnerHTML={{
-          __html: `
-        @keyframes scale-in { from { transform: scale(0.98); opacity: 0; } to { transform: scale(1); opacity: 1; } } 
-        @keyframes slide-in { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        .animate-scale-in { animation: scale-in 0.2s ease-out forwards; }
-        .animate-slide-in { animation: slide-in 0.3s ease-out forwards; }
-      `,
+          __html: `@keyframes scale-in { from { transform: scale(0.98); opacity: 0; } to { transform: scale(1); opacity: 1; } } @keyframes slide-in { from { transform: translateY(-20px) translateX(50%); opacity: 0; } to { transform: translateY(0) translateX(50%); opacity: 1; } } .animate-scale-in { animation: scale-in 0.2s ease-out forwards; } .animate-slide-in { animation: slide-in 0.3s ease-out forwards; right: 50%; }`,
         }}
       />
     </div>
