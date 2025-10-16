@@ -1,6 +1,5 @@
 "use client";
 
-// ✨ แก้ไข: เพิ่ม useCallback เข้ามาใน import ✨
 import React, {
   useState,
   useMemo,
@@ -945,8 +944,9 @@ export default function MailboxApp() {
 
         <Dashboard mailboxes={mailboxes} jurisdictions={JURISDICTIONS} />
       </main>
-      <div className="col-span-5 bg-white dark:bg-slate-800 rounded-lg shadow-md p-4">
-        <div className="flex justify-between items-center text-sm text-slate-500 dark:text-slate-400">
+
+      <footer className="mt-auto">
+        <div className="container mx-auto px-4 sm:px-6 py-6 flex justify-between items-center text-sm text-slate-500 border-t border-slate-200">
           <p className="flex items-center justify-center gap-1.5">
             Made with <span className="text-red-500">❤️</span> by Megamind
           </p>
@@ -954,12 +954,13 @@ export default function MailboxApp() {
             href="https://github.com/game1095/"
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-slate-900 dark:hover:text-white transition-colors"
+            className="hover:text-slate-900 transition-colors"
+            aria-label="GitHub Repository"
           >
             <Github size={20} />
           </a>
         </div>
-      </div>
+      </footer>
 
       {isFormModalOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
