@@ -366,25 +366,39 @@ export default function MailboxApp() {
     setToast({ show: true, message });
   }, []);
 
+  // สมมติว่า state ของคุณถูกประกาศแบบนี้
+  // const [mailboxes, setMailboxes] = useState<Mailbox[]>([]);
+
   const fetchMailboxes = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await fetch("/api/mailboxes");
       if (!response.ok) throw new Error("Failed to fetch data");
-      const data: any[] = await response.json();
-      const formattedData = data.map((mailbox: any) => ({
-        ...mailbox,
+
+      // 1. ใช้ Type ที่ถูกต้องสำหรับข้อมูลจาก API
+      const data: ApiMailbox[] = await response.json();
+
+      // 2. ทำการ map ข้อมูล โดย TypeScript จะรู้ Type ของตัวแปรต่างๆ อัตโนมัติ
+      const formattedData: Mailbox[] = data.map((mailbox) => ({
+        ...mailbox, // นำ property อื่นๆ ของ mailbox มาทั้งหมด
         cleaningHistory: (mailbox.cleaning_history || [])
-          .map((record: any) => ({
+          .map((record) => ({
             ...record,
-            date: new Date(record.date),
+            date: new Date(record.date), // แปลง string -> Date
           }))
-          .sort((a: any, b: any) => b.date.getTime() - a.date.getTime()),
+          // TypeScript รู้ว่า a และ b มี property date ที่เป็น Date object
+          .sort((a, b) => b.date.getTime() - a.date.getTime()),
       }));
+
       setMailboxes(formattedData);
     } catch (error) {
+      // 3. จัดการ Error อย่างปลอดภัย
+      let errorMessage = "ไม่สามารถโหลดข้อมูลได้";
+      if (error instanceof Error) {
+        errorMessage = error.message; // อาจจะใช้ error.message ไปแสดงผลก็ได้
+      }
       console.error("Fetch error:", error);
-      showToast("ไม่สามารถโหลดข้อมูลได้");
+      showToast(errorMessage);
     } finally {
       setIsLoading(false);
     }
