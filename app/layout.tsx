@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import { Sarabun } from "next/font/google";
-
-// ✨ ตรวจสอบว่ามีการ import 2 บรรทัดนี้ ✨
 import "./globals.css";
 import "leaflet/dist/leaflet.css";
+import { NextThemesProvider } from "./providers"; // Import the new provider
 
 const sarabun = Sarabun({
   subsets: ["thai", "latin"],
@@ -21,8 +20,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="th">
-      <body className={sarabun.className}>{children}</body>
+    <html lang="th" suppressHydrationWarning>
+      <body className={sarabun.className}>
+        {/* Wrap your app with the provider */}
+        <NextThemesProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+        </NextThemesProvider>
+      </body>
     </html>
   );
 }

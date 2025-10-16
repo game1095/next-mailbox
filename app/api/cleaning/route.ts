@@ -1,24 +1,31 @@
 import { supabase } from "@/lib/supabaseClient";
 import { NextResponse } from "next/server";
 
+export const runtime = "nodejs"; // Important for Vercel deployment
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { mailbox_id, cleanerName, date, beforeCleanImage, afterCleanImage } =
       body;
 
-    // A simple function to upload base64 images to Supabase Storage
     const uploadImage = async (base64: string, name: string) => {
-      // Convert base64 to buffer
+      if (!base64 || !base64.startsWith("data:image")) {
+        return null; // Return null if the image is not a valid base64 string
+      }
       const buffer = Buffer.from(base64.split(",")[1], "base64");
 
       const { data, error } = await supabase.storage
         .from("mailbox-images")
-        .upload(name, buffer, { contentType: "image/png", upsert: true });
+        .upload(name, buffer, {
+          contentType: "image/png",
+          upsert: true,
+        });
 
-      if (error) throw error;
-
-      // Return the public URL of the uploaded image
+      if (error) {
+        console.error("Supabase Storage Error:", error);
+        throw error;
+      }
       return supabase.storage.from("mailbox-images").getPublicUrl(data.path)
         .data.publicUrl;
     };
@@ -32,7 +39,6 @@ export async function POST(request: Request) {
       `after_${mailbox_id}_${Date.now()}.png`
     );
 
-    // Insert the new cleaning record into the database
     const { data, error } = await supabase
       .from("cleaning_history")
       .insert([
@@ -46,11 +52,14 @@ export async function POST(request: Request) {
       ])
       .select();
 
-    if (error) throw error;
+    if (error) {
+      console.error("Supabase DB Insert Error:", error);
+      throw error;
+    }
 
     return NextResponse.json(data);
   } catch (error: any) {
-    // ✨ แก้ไข: ระบุ Type ของ error เป็น any
+    // ✨ แก้ไข: ระบุ Type ของ error เป็น any เพื่อให้ Build ผ่าน
     console.error("Cleaning API Error:", error);
     return NextResponse.json(
       { error: error.message || "An unknown error occurred" },
