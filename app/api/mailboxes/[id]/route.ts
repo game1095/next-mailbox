@@ -1,12 +1,11 @@
-// 1. Import NextRequest เข้ามาด้วย
 import { supabase } from "@/lib/supabaseClient";
+// Import NextRequest เข้ามาด้วย
 import { NextResponse, NextRequest } from "next/server";
 
-export const runtime = "nodejs";
+// export const runtime = "nodejs"; // <-- ลบบรรทัดนี้ออก
 
 export async function PUT(
-  // 2. เปลี่ยนจาก Request เป็น NextRequest
-  request: NextRequest,
+  request: NextRequest, // <-- ใช้ NextRequest เหมือนเดิม
   { params }: { params: { id: string } }
 ) {
   try {
