@@ -368,21 +368,7 @@ export default function MailboxApp() {
 
   // สมมติว่า state ของคุณถูกประกาศแบบนี้
   // const [mailboxes, setMailboxes] = useState<Mailbox[]>([]);
-  // Interface สำหรับข้อมูล Mailbox ที่มาจาก API (มี snake_case)
-  interface ApiMailbox {
-    // ใส่ property อื่นๆ ที่มี...
-    id: number | string;
-    name: string;
-    cleaning_history?: { date: string; [key: string]: any }[]; // <-- ตัวสำคัญ
-  }
 
-  // Interface สำหรับข้อมูล Mailbox ที่จะใช้ในแอป (มี camelCase)
-  interface Mailbox {
-    // ใส่ property อื่นๆ ที่มี...
-    id: number | string;
-    name: string;
-    cleaningHistory: { date: Date; [key: string]: any }[];
-  }
   const fetchMailboxes = useCallback(async () => {
     setIsLoading(true);
     try {
