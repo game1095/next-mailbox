@@ -376,7 +376,7 @@ export default function MailboxApp() {
       if (!response.ok) throw new Error("Failed to fetch data");
 
       // 1. ใช้ Type ที่ถูกต้องสำหรับข้อมูลจาก API
-      const data: ApiMailbox[] = await response.json();
+      const data: Mailbox[] = await response.json();
 
       // 2. ทำการ map ข้อมูล โดย TypeScript จะรู้ Type ของตัวแปรต่างๆ อัตโนมัติ
       const formattedData: Mailbox[] = data.map((mailbox) => ({
