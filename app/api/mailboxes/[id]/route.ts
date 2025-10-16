@@ -1,17 +1,14 @@
 import { supabase } from "@/lib/supabaseClient";
 import { NextResponse, NextRequest } from "next/server";
 
-// กำหนด Type ของ context ให้ชัดเจน
-type RouteContext = {
-  params: {
-    id: string;
-  };
-};
-
-export async function PUT(request: NextRequest, context: RouteContext) {
+export async function PUT(
+  request: NextRequest,
+  // 1. เปลี่ยน Type ของ context ให้ตรงกับ Error log เป๊ะๆ
+  context: { params: Promise<{ id: string }> }
+) {
   try {
-    // ดึง id ออกมาจาก context.params
-    const { id } = context.params;
+    // 2. ใช้ await เพื่อรอให้ Promise ทำงานเสร็จก่อน แล้วค่อยดึง id ออกมา
+    const { id } = await context.params;
 
     const body = await request.json();
     const { id: bodyId, created_at, cleaningHistory, ...updateData } = body;
