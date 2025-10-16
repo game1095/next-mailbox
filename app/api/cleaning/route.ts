@@ -11,7 +11,8 @@ export async function POST(request: Request) {
 
     const uploadImage = async (base64: string, name: string) => {
       if (!base64 || !base64.startsWith("data:image")) {
-        return null; // Return null if the image is not a valid base64 string
+        // Handle placeholder case
+        return null;
       }
       const buffer = Buffer.from(base64.split(",")[1], "base64");
 
