@@ -33,6 +33,8 @@ import {
   Tooltip,
   Legend,
   ArcElement,
+  ChartOptions,
+  ChartData,
 } from "chart.js";
 import imageCompression from "browser-image-compression";
 import Image from "next/image";
@@ -64,6 +66,25 @@ interface Mailbox {
   lat: number | string;
   lng: number | string;
   cleaningHistory: CleaningRecord[];
+}
+
+// --- API Response Type Definitions (แก้ไข) ---
+interface ApiCleaningRecord {
+  date: string; // Date from JSON will be a string
+  cleanerName: string;
+  beforeCleanImage?: string;
+  afterCleanImage?: string;
+}
+
+interface ApiMailbox {
+  id: number;
+  postOffice: string;
+  postalCode: string;
+  jurisdiction: string;
+  landmark: string;
+  lat: number | string;
+  lng: number | string;
+  cleaning_history?: ApiCleaningRecord[]; // Property name from the server
 }
 
 // --- Constants ---
@@ -216,7 +237,8 @@ const Dashboard = ({
 }) => {
   const [dashboardJurisdictionFilter, setDashboardJurisdictionFilter] =
     useState<string>("");
-  const chartOptions = {
+
+  const chartOptions: ChartOptions<"bar"> = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: { legend: { display: false } },
@@ -225,13 +247,13 @@ const Dashboard = ({
       x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 } },
     },
   };
-  const pieChartOptions = {
+  const pieChartOptions: ChartOptions<"pie"> = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: { legend: { position: "top" as const } },
   };
 
-  const postOfficeData = useMemo(() => {
+  const postOfficeData: ChartData<"bar"> = useMemo(() => {
     const filtered = dashboardJurisdictionFilter
       ? mailboxes.filter((m) => m.jurisdiction === dashboardJurisdictionFilter)
       : mailboxes;
@@ -253,7 +275,7 @@ const Dashboard = ({
     };
   }, [mailboxes, dashboardJurisdictionFilter]);
 
-  const jurisdictionData = useMemo(() => {
+  const jurisdictionData: ChartData<"pie"> = useMemo(() => {
     const counts = mailboxes.reduce((acc, { jurisdiction }) => {
       acc[jurisdiction] = (acc[jurisdiction] || 0) + 1;
       return acc;
@@ -366,39 +388,29 @@ export default function MailboxApp() {
     setToast({ show: true, message });
   }, []);
 
-  // สมมติว่า state ของคุณถูกประกาศแบบนี้
-  // const [mailboxes, setMailboxes] = useState<Mailbox[]>([]);
-
   const fetchMailboxes = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await fetch("/api/mailboxes");
       if (!response.ok) throw new Error("Failed to fetch data");
-
-      // 1. ใช้ Type ที่ถูกต้องสำหรับข้อมูลจาก API
-      const data: Mailbox[] = await response.json();
-
-      // 2. ทำการ map ข้อมูล โดย TypeScript จะรู้ Type ของตัวแปรต่างๆ อัตโนมัติ
-      const formattedData: Mailbox[] = data.map((mailbox) => ({
-        ...mailbox, // นำ property อื่นๆ ของ mailbox มาทั้งหมด
-        cleaningHistory: (mailbox.cleaningHistory || [])
-          .map((record) => ({
-            ...record,
-            date: new Date(record.date), // แปลง string -> Date
-          }))
-          // TypeScript รู้ว่า a และ b มี property date ที่เป็น Date object
-          .sort((a, b) => b.date.getTime() - a.date.getTime()),
-      }));
-
+      const data: ApiMailbox[] = await response.json(); // แก้ไข: ใช้ ApiMailbox[]
+      const formattedData = data.map((mailbox) => {
+        // แก้ไข: ไม่ต้องระบุ type `any`
+        return {
+          ...mailbox,
+          cleaningHistory: (mailbox.cleaning_history || [])
+            .map((record) => ({
+              // แก้ไข: ไม่ต้องระบุ type `any`
+              ...record,
+              date: new Date(record.date),
+            }))
+            .sort((a, b) => b.date.getTime() - a.date.getTime()), // แก้ไข: ไม่ต้องระบุ type `any`
+        };
+      });
       setMailboxes(formattedData);
     } catch (error) {
-      // 3. จัดการ Error อย่างปลอดภัย
-      let errorMessage = "ไม่สามารถโหลดข้อมูลได้";
-      if (error instanceof Error) {
-        errorMessage = error.message; // อาจจะใช้ error.message ไปแสดงผลก็ได้
-      }
       console.error("Fetch error:", error);
-      showToast(errorMessage);
+      showToast("ไม่สามารถโหลดข้อมูลได้");
     } finally {
       setIsLoading(false);
     }
@@ -978,30 +990,25 @@ export default function MailboxApp() {
 
       {isFormModalOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
-          {" "}
           <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col transform transition-all animate-scale-in">
-            {" "}
             <div className="flex justify-between items-center px-6 py-4 border-b border-slate-200">
-              {" "}
               <h2 className="text-lg font-semibold text-slate-800">
                 {formMode === "add"
                   ? "เพิ่มข้อมูลตู้ไปรษณีย์"
                   : "แก้ไขข้อมูลตู้ไปรษณีย์"}
-              </h2>{" "}
+              </h2>
               <button
                 onClick={closeFormModal}
                 className="p-1 rounded-full text-slate-400 hover:bg-slate-100"
               >
                 <X size={18} />
-              </button>{" "}
-            </div>{" "}
+              </button>
+            </div>
             <form
               onSubmit={handleFormSubmit}
               className="p-6 space-y-4 overflow-y-auto"
             >
-              {" "}
               <div className="grid sm:grid-cols-2 gap-4">
-                {" "}
                 <div>
                   <label className="block text-sm font-medium text-slate-600 mb-1">
                     ที่ทำการไปรษณีย์
@@ -1020,7 +1027,7 @@ export default function MailboxApp() {
                       <option key={po} value={po} />
                     ))}
                   </datalist>
-                </div>{" "}
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-600 mb-1">
                     รหัสไปรษณีย์
@@ -1035,8 +1042,8 @@ export default function MailboxApp() {
                     className="w-full p-2 border border-slate-300 rounded-md"
                     required
                   />
-                </div>{" "}
-              </div>{" "}
+                </div>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-slate-600 mb-1">
                   สังกัด
@@ -1046,6 +1053,7 @@ export default function MailboxApp() {
                   value={currentFormData.jurisdiction}
                   onChange={handleFormInputChange}
                   className="w-full p-2 border border-slate-300 rounded-md"
+                  required
                 >
                   <option value="">-- เลือก --</option>
                   {JURISDICTIONS.map((j) => (
@@ -1054,7 +1062,7 @@ export default function MailboxApp() {
                     </option>
                   ))}
                 </select>
-              </div>{" "}
+              </div>
               <div>
                 <label className="block text-sm font-medium text-slate-600 mb-1">
                   จุดสังเกตที่ตั้ง
@@ -1067,14 +1075,12 @@ export default function MailboxApp() {
                   className="w-full p-2 border border-slate-300 rounded-md"
                   required
                 ></textarea>
-              </div>{" "}
+              </div>
               <div>
-                {" "}
                 <label className="block text-sm font-medium text-slate-600 mb-1">
                   จุดพิกัด
-                </label>{" "}
+                </label>
                 <div className="flex flex-col sm:flex-row items-center gap-2">
-                  {" "}
                   <input
                     type="number"
                     step="any"
@@ -1084,7 +1090,7 @@ export default function MailboxApp() {
                     placeholder="ละติจูด"
                     className="w-full p-2 border border-slate-300 rounded-md"
                     required
-                  />{" "}
+                  />
                   <input
                     type="number"
                     step="any"
@@ -1094,64 +1100,57 @@ export default function MailboxApp() {
                     placeholder="ลองจิจูด"
                     className="w-full p-2 border border-slate-300 rounded-md"
                     required
-                  />{" "}
+                  />
                   <button
                     type="button"
                     onClick={getCurrentLocation}
                     className="w-full sm:w-auto flex-shrink-0 flex items-center justify-center gap-2 bg-slate-100 text-slate-600 font-medium px-4 py-2 rounded-md hover:bg-slate-200"
                   >
                     <MapPin size={16} /> พิกัด
-                  </button>{" "}
-                </div>{" "}
+                  </button>
+                </div>
                 {locationStatus && (
                   <p className="text-xs text-slate-500 mt-2">
                     {locationStatus}
                   </p>
-                )}{" "}
-              </div>{" "}
+                )}
+              </div>
               <div className="flex justify-end gap-2 pt-4 border-t border-slate-200">
-                {" "}
                 <button
                   type="button"
                   onClick={closeFormModal}
                   className="px-5 py-2 bg-slate-200 text-slate-800 font-semibold rounded-md hover:bg-slate-300"
                 >
                   ยกเลิก
-                </button>{" "}
+                </button>
                 <button
                   type="submit"
                   className="px-5 py-2 bg-slate-800 text-white font-semibold rounded-md hover:bg-slate-700"
                 >
                   บันทึก
-                </button>{" "}
-              </div>{" "}
-            </form>{" "}
-          </div>{" "}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
       {isDetailModalOpen && selectedMailbox && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
-          {" "}
           <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] flex flex-col transform transition-all animate-scale-in">
-            {" "}
             <div className="flex justify-between items-center px-6 py-4 border-b border-slate-200">
-              {" "}
               <h2 className="text-lg font-semibold text-slate-800">
                 รายละเอียดตู้ไปรษณีย์
-              </h2>{" "}
+              </h2>
               <button
                 onClick={closeDetailModal}
                 className="p-1 rounded-full text-slate-400 hover:bg-slate-100"
               >
                 <X size={18} />
-              </button>{" "}
-            </div>{" "}
+              </button>
+            </div>
             <div className="p-6 overflow-y-auto">
-              {" "}
               <div className="grid lg:grid-cols-2 gap-6">
-                {" "}
                 <div className="space-y-4">
-                  {" "}
                   <div>
                     <h3 className="text-sm font-semibold text-slate-500">
                       ที่ทำการไปรษณีย์
@@ -1160,7 +1159,7 @@ export default function MailboxApp() {
                       {selectedMailbox.postOffice} ({selectedMailbox.postalCode}
                       )
                     </p>
-                  </div>{" "}
+                  </div>
                   <div>
                     <h3 className="text-sm font-semibold text-slate-500">
                       สังกัด
@@ -1168,7 +1167,7 @@ export default function MailboxApp() {
                     <p className="text-base text-slate-900">
                       {selectedMailbox.jurisdiction}
                     </p>
-                  </div>{" "}
+                  </div>
                   <div>
                     <h3 className="text-sm font-semibold text-slate-500">
                       จุดสังเกต
@@ -1176,7 +1175,7 @@ export default function MailboxApp() {
                     <p className="text-base text-slate-900">
                       {selectedMailbox.landmark}
                     </p>
-                  </div>{" "}
+                  </div>
                   <div>
                     <h3 className="text-sm font-semibold text-slate-500">
                       พิกัด
@@ -1184,72 +1183,63 @@ export default function MailboxApp() {
                     <p className="text-base text-slate-900 font-mono">
                       {selectedMailbox.lat}, {selectedMailbox.lng}
                     </p>
-                  </div>{" "}
-                </div>{" "}
+                  </div>
+                </div>
                 <div>
-                  {" "}
                   <h3 className="text-sm font-semibold text-slate-500 mb-2">
                     ตำแหน่งบนแผนที่
-                  </h3>{" "}
+                  </h3>
                   <div className="w-full h-96 rounded-md overflow-hidden border border-slate-200">
-                    {" "}
+                    {/* แก้ไข: ปรับปรุง URL ของ iframe ให้ถูกต้อง */}
                     <iframe
                       width="100%"
                       height="100%"
                       loading="lazy"
                       allowFullScreen
-                      src={`https://www.google.com/maps?q=${selectedMailbox.lat},${selectedMailbox.lng}&hl=th&z=15&output=embed`}
-                    ></iframe>{" "}
-                  </div>{" "}
-                </div>{" "}
-              </div>{" "}
+                      src={`https://maps.google.com/maps?q=${selectedMailbox.lat},${selectedMailbox.lng}&hl=th&z=15&output=embed`}
+                    ></iframe>
+                  </div>
+                </div>
+              </div>
               <div className="pt-6 mt-6 border-t border-slate-200">
-                {" "}
                 <h3 className="text-lg font-semibold text-slate-800 mb-4">
                   ประวัติการทำความสะอาด
-                </h3>{" "}
+                </h3>
                 {selectedMailbox.cleaningHistory.length === 0 ? (
                   <p className="text-slate-500">ยังไม่มีประวัติ</p>
                 ) : (
                   <div className="overflow-x-auto rounded-lg border border-slate-200">
-                    {" "}
                     <table className="w-full text-sm">
-                      {" "}
                       <thead className="bg-slate-50">
-                        {" "}
                         <tr>
-                          {" "}
                           <th className="px-4 py-2 text-left font-semibold text-slate-600 w-12">
                             ลำดับ
-                          </th>{" "}
+                          </th>
                           <th className="px-4 py-2 text-left font-semibold text-slate-600">
                             วันที่
-                          </th>{" "}
+                          </th>
                           <th className="px-4 py-2 text-center font-semibold text-slate-600">
                             ก่อนทำ
-                          </th>{" "}
+                          </th>
                           <th className="px-4 py-2 text-center font-semibold text-slate-600">
                             หลังทำ
-                          </th>{" "}
+                          </th>
                           <th className="px-4 py-2 text-left font-semibold text-slate-600">
                             ผู้รับผิดชอบ
-                          </th>{" "}
-                        </tr>{" "}
-                      </thead>{" "}
+                          </th>
+                        </tr>
+                      </thead>
                       <tbody className="divide-y divide-slate-200">
-                        {" "}
                         {selectedMailbox.cleaningHistory.map(
                           (record, index) => (
                             <tr key={index} className="hover:bg-slate-50">
-                              {" "}
                               <td className="px-4 py-3 whitespace-nowrap text-slate-800 font-medium">
                                 {index + 1}
-                              </td>{" "}
+                              </td>
                               <td className="px-4 py-3 whitespace-nowrap text-slate-500">
                                 {formatDateToThai(record.date)}
-                              </td>{" "}
+                              </td>
                               <td className="px-4 py-3 text-center">
-                                {" "}
                                 {record.beforeCleanImage ? (
                                   <Image
                                     src={record.beforeCleanImage}
@@ -1265,10 +1255,9 @@ export default function MailboxApp() {
                                   />
                                 ) : (
                                   <span className="text-slate-400">-</span>
-                                )}{" "}
-                              </td>{" "}
+                                )}
+                              </td>
                               <td className="px-4 py-3 text-center">
-                                {" "}
                                 {record.afterCleanImage ? (
                                   <Image
                                     src={record.afterCleanImage}
@@ -1284,80 +1273,73 @@ export default function MailboxApp() {
                                   />
                                 ) : (
                                   <span className="text-slate-400">-</span>
-                                )}{" "}
-                              </td>{" "}
+                                )}
+                              </td>
                               <td className="px-4 py-3 whitespace-nowrap text-slate-500">
                                 {record.cleanerName}
-                              </td>{" "}
+                              </td>
                             </tr>
                           )
-                        )}{" "}
-                      </tbody>{" "}
-                    </table>{" "}
+                        )}
+                      </tbody>
+                    </table>
                   </div>
-                )}{" "}
-              </div>{" "}
-            </div>{" "}
+                )}
+              </div>
+            </div>
             <div className="flex justify-end gap-2 p-4 border-t border-slate-200">
-              {" "}
               <button
                 type="button"
                 onClick={closeDetailModal}
                 className="px-5 py-2 bg-slate-200 text-slate-800 font-semibold rounded-md hover:bg-slate-300"
               >
                 ปิด
-              </button>{" "}
-            </div>{" "}
-          </div>{" "}
+              </button>
+            </div>
+          </div>
         </div>
       )}
       {isReportModalOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
-          {" "}
           <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col transform transition-all animate-scale-in">
-            {" "}
             <div className="flex justify-between items-center px-6 py-4 border-b border-slate-200">
-              {" "}
               <h2 className="text-lg font-semibold text-slate-800">
                 รายงานผลการทำความสะอาด
-              </h2>{" "}
+              </h2>
               <button
                 onClick={closeReportModal}
                 className="p-1 rounded-full text-slate-400 hover:bg-slate-100"
               >
                 <X size={18} />
-              </button>{" "}
-            </div>{" "}
+              </button>
+            </div>
             <form
               onSubmit={handleReportSubmit}
               className="p-6 space-y-4 overflow-y-auto"
             >
-              {" "}
               <div>
-                {" "}
                 <label className="block text-sm font-medium text-slate-600 mb-1">
                   วันที่รายงาน
-                </label>{" "}
+                </label>
                 <input
                   type="date"
                   value={reportDate}
                   onChange={(e) => setReportDate(e.target.value)}
                   className="w-full p-2 border border-slate-300 rounded-md"
                   required
-                />{" "}
-              </div>{" "}
+                />
+              </div>
               <div>
-                {" "}
                 <label className="block text-sm font-medium text-slate-600 mb-1">
                   รูปภาพก่อนทำความสะอาด
-                </label>{" "}
+                </label>
                 <input
                   type="file"
                   accept="image/*"
                   onChange={(e) => handleImageUpload(e, "before")}
                   className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100"
                   required
-                />{" "}
+                />
                 {uploadProgress.before > 0 && (
                   <div className="mt-2 w-full bg-slate-200 rounded-full h-2.5">
                     <div
@@ -1365,7 +1347,7 @@ export default function MailboxApp() {
                       style={{ width: `${uploadProgress.before}%` }}
                     ></div>
                   </div>
-                )}{" "}
+                )}
                 {reportBeforeImage && (
                   <Image
                     src={reportBeforeImage}
@@ -1374,20 +1356,19 @@ export default function MailboxApp() {
                     height={128}
                     className="mt-2 w-32 h-32 object-cover rounded-md border"
                   />
-                )}{" "}
-              </div>{" "}
+                )}
+              </div>
               <div>
-                {" "}
                 <label className="block text-sm font-medium text-slate-600 mb-1">
                   รูปภาพหลังทำความสะอาด
-                </label>{" "}
+                </label>
                 <input
                   type="file"
                   accept="image/*"
                   onChange={(e) => handleImageUpload(e, "after")}
                   className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100"
                   required
-                />{" "}
+                />
                 {uploadProgress.after > 0 && (
                   <div className="mt-2 w-full bg-slate-200 rounded-full h-2.5">
                     <div
@@ -1395,7 +1376,7 @@ export default function MailboxApp() {
                       style={{ width: `${uploadProgress.after}%` }}
                     ></div>
                   </div>
-                )}{" "}
+                )}
                 {reportAfterImage && (
                   <Image
                     src={reportAfterImage}
@@ -1404,13 +1385,12 @@ export default function MailboxApp() {
                     height={128}
                     className="mt-2 w-32 h-32 object-cover rounded-md border"
                   />
-                )}{" "}
-              </div>{" "}
+                )}
+              </div>
               <div>
-                {" "}
                 <label className="block text-sm font-medium text-slate-600 mb-1">
                   ชื่อผู้รายงาน/ผู้ทำความสะอาด
-                </label>{" "}
+                </label>
                 <input
                   type="text"
                   value={reportCleanerName}
@@ -1418,26 +1398,25 @@ export default function MailboxApp() {
                   className="w-full p-2 border border-slate-300 rounded-md"
                   placeholder="เช่น ทีมงาน A, เจ้าหน้าที่ สมชาย"
                   required
-                />{" "}
-              </div>{" "}
+                />
+              </div>
               <div className="flex justify-end gap-2 pt-4 border-t border-slate-200">
-                {" "}
                 <button
                   type="button"
                   onClick={closeReportModal}
                   className="px-5 py-2 bg-slate-200 text-slate-800 font-semibold rounded-md hover:bg-slate-300"
                 >
                   ยกเลิก
-                </button>{" "}
+                </button>
                 <button
                   type="submit"
                   className="px-5 py-2 bg-slate-800 text-white font-semibold rounded-md hover:bg-slate-700"
                 >
                   บันทึกรายงาน
-                </button>{" "}
-              </div>{" "}
-            </form>{" "}
-          </div>{" "}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
       {isImageModalOpen && fullImageUrl && (
@@ -1445,26 +1424,24 @@ export default function MailboxApp() {
           className="fixed inset-0 bg-slate-900/90 backdrop-blur-sm flex justify-center items-center z-[60] p-4"
           onClick={closeImageModal}
         >
-          {" "}
           <div
             className="relative max-w-full max-h-[90vh] bg-transparent flex justify-center items-center"
             onClick={(e) => e.stopPropagation()}
           >
-            {" "}
             <Image
               src={fullImageUrl}
               alt="Full Screen"
               width={1920}
               height={1080}
               className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl border-4 border-white"
-            />{" "}
+            />
             <button
               onClick={closeImageModal}
               className="absolute top-4 right-4 p-2 rounded-full bg-white text-slate-800 hover:bg-slate-100 z-10"
             >
               <X size={24} />
-            </button>{" "}
-          </div>{" "}
+            </button>
+          </div>
         </div>
       )}
 
