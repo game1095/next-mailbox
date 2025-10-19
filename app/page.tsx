@@ -21,9 +21,9 @@ import {
   BarChart2,
   Camera,
   CheckCircle,
-  ArrowUpDown, // --- [แก้ไข] --- เพิ่มไอคอน
-  ChevronUp, // --- [แก้ไข] --- เพิ่มไอคอน
-  ChevronDown, // --- [แก้ไข] --- เพิ่มไอคอน
+  ArrowUpDown,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { Bar, Pie } from "react-chartjs-2";
@@ -52,6 +52,9 @@ ChartJS.register(
   ArcElement
 );
 
+// --- [เพิ่ม] --- Type สำหรับประเภทตู้
+type MailboxType = "ก." | "ข." | "ค." | "ง." | "";
+
 // --- Type Definitions ---
 interface CleaningRecord {
   date: Date;
@@ -65,6 +68,7 @@ interface Mailbox {
   postOffice: string;
   postalCode: string;
   jurisdiction: string;
+  mailboxType: MailboxType; // [เพิ่ม]
   landmark: string;
   lat: number | string;
   lng: number | string;
@@ -84,13 +88,14 @@ interface ApiMailbox {
   postOffice: string;
   postalCode: string;
   jurisdiction: string;
+  mailboxType: MailboxType; // [เพิ่ม]
   landmark: string;
   lat: number | string;
   lng: number | string;
   cleaning_history?: ApiCleaningRecord[]; // Property name from the server
 }
 
-// --- [แก้ไข] --- Type สำหรับการ Sort
+// --- Type สำหรับการ Sort
 type SortColumn =
   | "postOffice"
   | "landmark"
@@ -99,6 +104,9 @@ type SortColumn =
   | null;
 
 // --- Constants ---
+// [เพิ่ม] Array ประเภทตู้
+const MAILBOX_TYPES: MailboxType[] = ["ก.", "ข.", "ค.", "ง."];
+
 const JURISDICTIONS = [
   "ปจ.นครสวรรค์",
   "ปจ.อุทัยธานี",
@@ -265,9 +273,11 @@ const Dashboard = ({
   };
 
   const postOfficeData: ChartData<"bar"> = useMemo(() => {
+    // [แก้ไข] ย้ายตัวแปร filter ออกมาใช้ร่วมกัน
     const filtered = dashboardJurisdictionFilter
       ? mailboxes.filter((m) => m.jurisdiction === dashboardJurisdictionFilter)
       : mailboxes;
+
     const counts = filtered.reduce((acc, { postOffice }) => {
       acc[postOffice] = (acc[postOffice] || 0) + 1;
       return acc;
@@ -314,6 +324,40 @@ const Dashboard = ({
     };
   }, [mailboxes]);
 
+  // [เพิ่ม] useMemo สำหรับข้อมูลประเภทตู้
+  const mailboxTypeData: ChartData<"pie"> = useMemo(() => {
+    // ใช้ข้อมูลที่ filter สังกัดแล้ว
+    const filtered = dashboardJurisdictionFilter
+      ? mailboxes.filter((m) => m.jurisdiction === dashboardJurisdictionFilter)
+      : mailboxes;
+
+    const counts = filtered.reduce((acc, { mailboxType }) => {
+      if (mailboxType) {
+        // ตรวจสอบว่ามีข้อมูล
+        acc[mailboxType] = (acc[mailboxType] || 0) + 1;
+      }
+      return acc;
+    }, {} as Record<string, number>);
+
+    return {
+      labels: Object.keys(counts),
+      datasets: [
+        {
+          label: "จำนวนตู้",
+          data: Object.values(counts),
+          backgroundColor: [
+            "rgba(59, 130, 246, 0.7)", // blue
+            "rgba(16, 185, 129, 0.7)", // green
+            "rgba(245, 158, 11, 0.7)", // amber
+            "rgba(139, 92, 246, 0.7)", // violet
+          ],
+          borderColor: "#ffffff",
+          borderWidth: 2,
+        },
+      ],
+    };
+  }, [mailboxes, dashboardJurisdictionFilter]);
+
   return (
     // [UI] เปลี่ยนจาก border เป็น shadow และเพิ่มความโค้งมน
     <div className="bg-white rounded-xl shadow-lg p-4 space-y-4">
@@ -335,22 +379,40 @@ const Dashboard = ({
           ))}
         </select>
       </div>
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* [UI] เปลี่ยนจาก border เป็น default (ไม่มี) เพราะอยู่ใน card อยู่แล้ว */}
-        <div className="xl:col-span-2 bg-slate-50 rounded-lg p-4">
+      {/* [แก้ไข] ปรับ Layout Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* กราฟแท่ง (ใช้ 2 ส่วน) */}
+        <div className="lg:col-span-2 bg-slate-50 border border-slate-200 rounded-lg p-4">
           <h3 className="font-semibold text-slate-700 text-center">
             จำนวนตู้ฯ แยกตามที่ทำการ
           </h3>
-          <div className="relative h-80 mt-4">
+          {/* [แก้ไข] เพิ่มความสูงกราฟแท่ง */}
+          <div className="relative h-96 mt-4">
             <Bar options={chartOptions} data={postOfficeData} />
           </div>
         </div>
-        <div className="bg-slate-50 rounded-lg p-4">
-          <h3 className="font-semibold text-slate-700 text-center">
-            สัดส่วนตู้ฯ แยกตามสังกัด
-          </h3>
-          <div className="relative h-80 mt-4">
-            <Pie options={pieChartOptions} data={jurisdictionData} />
+
+        {/* [แก้ไข] Wrapper สำหรับกราฟวงกลม 2 อัน (ใช้ 1 ส่วน) */}
+        <div className="lg:col-span-1 space-y-6">
+          {/* กราฟวงกลม 1 (สังกัด) */}
+          <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+            <h3 className="font-semibold text-slate-700 text-center">
+              สัดส่วนตู้ฯ แยกตามสังกัด
+            </h3>
+            {/* [แก้ไข] ลดความสูงกราฟวงกลม */}
+            <div className="relative h-64 mt-4">
+              <Pie options={pieChartOptions} data={jurisdictionData} />
+            </div>
+          </div>
+
+          {/* [เพิ่ม] กราฟวงกลม 2 (ประเภทตู้) */}
+          <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+            <h3 className="font-semibold text-slate-700 text-center">
+              สัดส่วนตู้ฯ แยกตามประเภท
+            </h3>
+            <div className="relative h-64 mt-4">
+              <Pie options={pieChartOptions} data={mailboxTypeData} />
+            </div>
           </div>
         </div>
       </div>
@@ -436,11 +498,13 @@ export default function MailboxApp() {
     fetchMailboxes();
   }, [fetchMailboxes]);
 
+  // [แก้ไข] เพิ่ม mailboxType
   const BLANK_MAILBOX_FORM = useMemo(
     () => ({
       postOffice: "",
       postalCode: "",
       jurisdiction: "",
+      mailboxType: "" as MailboxType,
       landmark: "",
       lat: "",
       lng: "",
@@ -665,13 +729,15 @@ export default function MailboxApp() {
 
   const handleFormSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    // [แก้ไข] เพิ่มการตรวจสอบ mailboxType
     if (
       !currentFormData.landmark ||
       !currentFormData.lat ||
       !currentFormData.lng ||
       !currentFormData.postalCode ||
       !currentFormData.postOffice ||
-      !currentFormData.jurisdiction
+      !currentFormData.jurisdiction ||
+      !currentFormData.mailboxType
     ) {
       alert("กรุณากรอกข้อมูลให้ครบถ้วน");
       return;
@@ -1223,6 +1289,26 @@ export default function MailboxApp() {
                   ))}
                 </select>
               </div>
+              {/* [เพิ่ม] Dropdown สำหรับประเภทตู้ */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  ประเภทตู้
+                </label>
+                <select
+                  name="mailboxType"
+                  value={currentFormData.mailboxType}
+                  onChange={handleFormInputChange}
+                  className="w-full p-2 border border-slate-300 rounded-md shadow-sm"
+                  required
+                >
+                  <option value="">-- เลือก --</option>
+                  {MAILBOX_TYPES.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   จุดสังเกตที่ตั้ง
@@ -1333,6 +1419,15 @@ export default function MailboxApp() {
                     </h3>
                     <p className="text-base text-slate-900">
                       {selectedMailbox.jurisdiction}
+                    </p>
+                  </div>
+                  {/* [เพิ่ม] แสดงประเภทตู้ */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-500">
+                      ประเภทตู้
+                    </h3>
+                    <p className="text-base text-slate-900">
+                      {selectedMailbox.mailboxType}
                     </p>
                   </div>
                   <div>
