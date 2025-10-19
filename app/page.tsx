@@ -270,6 +270,14 @@ const Dashboard = ({
   const [dashboardJurisdictionFilter, setDashboardJurisdictionFilter] =
     useState<string>("");
 
+  // [ปรับปรุง] กรอง mailboxes ตาม filter ก่อนสำหรับใช้ใน useMemo อื่นๆ
+  const filteredMailboxesForDashboard = useMemo(() => {
+    return dashboardJurisdictionFilter
+      ? mailboxes.filter((m) => m.jurisdiction === dashboardJurisdictionFilter)
+      : mailboxes;
+  }, [mailboxes, dashboardJurisdictionFilter]);
+
+  // --- Options and Data for existing charts ---
   const chartOptions: ChartOptions<"bar"> = {
     responsive: true,
     maintainAspectRatio: false,
@@ -285,15 +293,15 @@ const Dashboard = ({
     plugins: { legend: { position: "top" as const } },
   };
 
+  // ใช้ filteredMailboxesForDashboard
   const postOfficeData: ChartData<"bar"> = useMemo(() => {
-    const filtered = dashboardJurisdictionFilter
-      ? mailboxes.filter((m) => m.jurisdiction === dashboardJurisdictionFilter)
-      : mailboxes;
-
-    const counts = filtered.reduce((acc, { postOffice }) => {
-      acc[postOffice] = (acc[postOffice] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const counts = filteredMailboxesForDashboard.reduce(
+      (acc, { postOffice }) => {
+        acc[postOffice] = (acc[postOffice] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
     return {
       labels: Object.keys(counts),
       datasets: [
@@ -306,8 +314,9 @@ const Dashboard = ({
         },
       ],
     };
-  }, [mailboxes, dashboardJurisdictionFilter]);
+  }, [filteredMailboxesForDashboard]); // เปลี่ยน dependency
 
+  // กราฟนี้ไม่ควร filter ตามสังกัด เพราะต้องการแสดงสัดส่วนทั้งหมด
   const jurisdictionData: ChartData<"pie"> = useMemo(() => {
     const counts = mailboxes.reduce((acc, { jurisdiction }) => {
       acc[jurisdiction] = (acc[jurisdiction] || 0) + 1;
@@ -334,19 +343,19 @@ const Dashboard = ({
         },
       ],
     };
-  }, [mailboxes]);
+  }, [mailboxes]); // ใช้ mailboxes เดิม
 
+  // ใช้ filteredMailboxesForDashboard
   const mailboxTypeData: ChartData<"pie"> = useMemo(() => {
-    const filtered = dashboardJurisdictionFilter
-      ? mailboxes.filter((m) => m.jurisdiction === dashboardJurisdictionFilter)
-      : mailboxes;
-
-    const counts = filtered.reduce((acc, { mailboxType }) => {
-      if (mailboxType) {
-        acc[mailboxType] = (acc[mailboxType] || 0) + 1;
-      }
-      return acc;
-    }, {} as Record<string, number>);
+    const counts = filteredMailboxesForDashboard.reduce(
+      (acc, { mailboxType }) => {
+        if (mailboxType) {
+          acc[mailboxType] = (acc[mailboxType] || 0) + 1;
+        }
+        return acc;
+      },
+      {} as Record<string, number>
+    );
 
     return {
       labels: Object.keys(counts),
@@ -365,10 +374,11 @@ const Dashboard = ({
         },
       ],
     };
-  }, [mailboxes, dashboardJurisdictionFilter]);
+  }, [filteredMailboxesForDashboard]); // เปลี่ยน dependency
 
+  // [ปรับปรุง] ใช้ filteredMailboxesForDashboard ในการหา overdue
   const overdueMailboxes = useMemo(() => {
-    return mailboxes.filter((m) => {
+    return filteredMailboxesForDashboard.filter((m) => {
       const latestCleaningDate = m.cleaningHistory[0]?.date;
       if (!latestCleaningDate) return true;
 
@@ -380,12 +390,56 @@ const Dashboard = ({
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       return diffDays > 90;
     });
-  }, [mailboxes]);
+  }, [filteredMailboxesForDashboard]); // เปลี่ยน dependency
+
+  // [ปรับปรุง] ใช้ filteredMailboxesForDashboard และ overdueMailboxes ที่กรองแล้ว
+  const comparisonChartData: ChartData<"bar"> = useMemo(() => {
+    const total = filteredMailboxesForDashboard.length; // ใช้ total ที่กรองแล้ว
+    const overdue = overdueMailboxes.length; // ใช้ overdue ที่กรองแล้ว
+    const clean = total - overdue;
+
+    return {
+      labels: ["ตู้ที่รายงานแล้ว (ปกติ)", "ตู้ที่ค้างรายงาน (เกิน 90 วัน)"],
+      datasets: [
+        {
+          label: "จำนวนตู้",
+          data: [clean, overdue],
+          backgroundColor: [
+            "rgba(16, 185, 129, 0.7)", // Green
+            "rgba(239, 68, 68, 0.7)", // Red
+          ],
+          borderColor: ["rgba(16, 185, 129, 1)", "rgba(239, 68, 68, 1)"],
+          borderWidth: 1,
+        },
+      ],
+    };
+  }, [filteredMailboxesForDashboard, overdueMailboxes]); // เปลี่ยน dependency
+
+  const comparisonChartOptions: ChartOptions<"bar"> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    indexAxis: "y",
+    plugins: {
+      legend: { display: false },
+      title: {
+        display: true,
+        // [ปรับปรุง] แสดง total ที่กรองแล้ว
+        text: `ภาพรวมตู้${
+          dashboardJurisdictionFilter
+            ? `ใน ${dashboardJurisdictionFilter}`
+            : "ทั้งหมด"
+        } (${filteredMailboxesForDashboard.length} ตู้)`,
+        font: { size: 14 },
+      },
+    },
+    scales: {
+      x: { beginAtZero: true, ticks: { precision: 0 } },
+    },
+  };
 
   return (
-    // [แก้ไข] เปลี่ยนจาก grid layout มาเป็น space-y-6 เพื่อให้เรียงตามแนวตั้ง
     <div className="bg-white rounded-xl shadow-lg p-4 space-y-6">
-      {/* ส่วนหัว Dashboard (เหมือนเดิม) */}
+      {/* ส่วนหัว Dashboard */}
       <div className="flex justify-between items-center">
         <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
           <BarChart2 size={18} /> Dashboard
@@ -395,7 +449,8 @@ const Dashboard = ({
           onChange={(e) => setDashboardJurisdictionFilter(e.target.value)}
           className="p-2 border border-slate-300 rounded-md bg-white text-sm focus:ring-2 focus:ring-sky-500 shadow-sm"
         >
-          <option value="">กรองกราฟตามสังกัด (ทั้งหมด)</option>
+          <option value="">กรองตามสังกัด (ทั้งหมด)</option>{" "}
+          {/* ปรับข้อความเล็กน้อย */}
           {jurisdictions.map((j) => (
             <option key={j} value={j}>
               {j}
@@ -404,66 +459,89 @@ const Dashboard = ({
         </select>
       </div>
 
-      {/* 1. [แถวที่ 1] ตู้ที่ไม่ได้ทำความสะอาด (100%) */}
-      <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg shadow-sm flex flex-col">
-        <div
-          onClick={onShowOverdueClick}
-          className="flex items-center gap-3 cursor-pointer"
-          title="คลิกเพื่อกรองในตารางด้านบน"
-        >
-          <AlertTriangle size={20} className="text-red-600" />
-          <h3 className="text-base font-semibold text-red-800">
-            ตู้ที่ไม่ได้ทำความสะอาดเกิน 90 วัน
-          </h3>
-        </div>
-        <p className="text-4xl font-bold text-red-600 mt-2">
-          {overdueMailboxes.length} ตู้
-        </p>
-        <p
-          onClick={onShowOverdueClick}
-          className="text-xs text-red-500 mt-1 cursor-pointer hover:underline"
-        >
-          คลิกเพื่อกรองในตาราง
-        </p>
+      {/* --- Layout เดิม (ตาม request ล่าสุด) --- */}
 
-        <div className="mt-4 pt-4 border-t border-red-200 space-y-3 max-h-96 overflow-y-auto pr-2">
-          <h4 className="text-sm font-semibold text-slate-700">
-            รายชื่อตู้ที่ค้างดำเนินการ:
-          </h4>
-          {overdueMailboxes.length > 0 ? (
-            overdueMailboxes.map((mailbox) => (
-              <div
-                key={mailbox.id}
-                className="bg-white p-3 rounded-md border border-red-200 shadow-sm"
-              >
-                <div className="flex justify-between items-center mb-1.5">
-                  <p className="font-semibold text-sm text-slate-700 pr-2 break-words">
-                    {mailbox.postOffice}
+      {/* 1. [แถวที่ 1] ตู้ค้าง (40%) + กราฟเปรียบเทียบ (60%) */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        {/* 1.1 ตู้ค้าง (40%) */}
+        <div className="lg:col-span-2 bg-red-50 border-l-4 border-red-500 p-4 rounded-lg shadow-sm flex flex-col">
+          <div
+            onClick={onShowOverdueClick}
+            className="flex items-center gap-3 cursor-pointer"
+            title="คลิกเพื่อกรองในตารางด้านบน"
+          >
+            <AlertTriangle size={20} className="text-red-600" />
+            <h3 className="text-base font-semibold text-red-800">
+              ตู้ที่ไม่ได้ทำความสะอาดเกิน 90 วัน
+            </h3>
+          </div>
+          <p className="text-4xl font-bold text-red-600 mt-2">
+            {overdueMailboxes.length} ตู้ {/* แสดงจำนวนที่กรองแล้ว */}
+          </p>
+          <p
+            onClick={onShowOverdueClick}
+            className="text-xs text-red-500 mt-1 cursor-pointer hover:underline"
+          >
+            คลิกเพื่อกรองในตาราง
+          </p>
+
+          <div className="mt-4 pt-4 border-t border-red-200 space-y-3 max-h-[350px] overflow-y-auto pr-2 flex-grow">
+            <h4 className="text-sm font-semibold text-slate-700">
+              รายชื่อตู้ที่ค้างดำเนินการ: {/* แสดงรายการที่กรองแล้ว */}
+            </h4>
+            {overdueMailboxes.length > 0 ? (
+              overdueMailboxes.map((mailbox) => (
+                <div
+                  key={mailbox.id}
+                  className="bg-white p-3 rounded-md border border-red-200 shadow-sm"
+                >
+                  <div className="flex justify-between items-center mb-1.5">
+                    <p className="font-semibold text-sm text-slate-700 pr-2 break-words">
+                      {mailbox.postOffice}
+                    </p>
+                    <button
+                      onClick={() => onReportClick(mailbox.id)}
+                      className="flex-shrink-0 flex items-center gap-1.5 text-xs bg-sky-600 text-white font-semibold px-3 py-1.5 rounded-md hover:bg-sky-700 transition-colors shadow-sm"
+                      title="รายงานผลการทำความสะอาด"
+                    >
+                      <Camera size={14} />
+                      <span className="hidden sm:inline">รายงาน</span>
+                    </button>
+                  </div>
+                  <p className="text-xs text-slate-500 break-words">
+                    {mailbox.landmark}
                   </p>
-                  <button
-                    onClick={() => onReportClick(mailbox.id)}
-                    className="flex-shrink-0 flex items-center gap-1.5 text-xs bg-sky-600 text-white font-semibold px-3 py-1.5 rounded-md hover:bg-sky-700 transition-colors shadow-sm"
-                    title="รายงานผลการทำความสะอาด"
-                  >
-                    <Camera size={14} />
-                    <span className="hidden sm:inline">รายงาน</span>
-                  </button>
                 </div>
-                <p className="text-xs text-slate-500 break-words">
-                  {mailbox.landmark}
-                </p>
-              </div>
-            ))
-          ) : (
-            <p className="text-sm text-slate-600">ไม่มีตู้ที่ค้างทำความสะอาด</p>
-          )}
+              ))
+            ) : (
+              <p className="text-sm text-slate-600">
+                ไม่มีตู้ที่ค้างทำความสะอาด{" "}
+                {dashboardJurisdictionFilter
+                  ? `ใน ${dashboardJurisdictionFilter}`
+                  : ""}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* 1.2 กราฟเปรียบเทียบ (60%) */}
+        <div className="lg:col-span-3 bg-slate-50 border border-slate-200 rounded-lg p-4">
+          {/* หัวข้อถูกย้ายไปอยู่ใน options ของกราฟแล้ว */}
+          <div className="relative h-[450px]">
+            {" "}
+            {/* ลด mt-4 ออก */}
+            <Bar options={comparisonChartOptions} data={comparisonChartData} />
+          </div>
         </div>
       </div>
 
       {/* 2. [แถวที่ 2] กราฟแท่ง (100%) */}
       <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
         <h3 className="font-semibold text-slate-700 text-center">
-          จำนวนตู้ฯ แยกตามที่ทำการ
+          จำนวนตู้ฯ แยกตามที่ทำการ{" "}
+          {dashboardJurisdictionFilter
+            ? `ใน ${dashboardJurisdictionFilter}`
+            : ""}
         </h3>
         <div className="relative h-96 mt-4">
           <Bar options={chartOptions} data={postOfficeData} />
@@ -474,7 +552,7 @@ const Dashboard = ({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
           <h3 className="font-semibold text-slate-700 text-center">
-            สัดส่วนตู้ฯ แยกตามสังกัด
+            สัดส่วนตู้ฯ แยกตามสังกัด (ทั้งหมด) {/* ชี้แจงว่าไม่ filter */}
           </h3>
           <div className="relative h-64 mt-4">
             <Pie options={pieChartOptions} data={jurisdictionData} />
@@ -483,7 +561,10 @@ const Dashboard = ({
 
         <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
           <h3 className="font-semibold text-slate-700 text-center">
-            สัดส่วนตู้ฯ แยกตามประเภท
+            สัดส่วนตู้ฯ แยกตามประเภท{" "}
+            {dashboardJurisdictionFilter
+              ? `ใน ${dashboardJurisdictionFilter}`
+              : ""}
           </h3>
           <div className="relative h-64 mt-4">
             <Pie options={pieChartOptions} data={mailboxTypeData} />
