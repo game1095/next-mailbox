@@ -13,7 +13,7 @@ import {
   useMapEvents,
   Popup,
 } from "react-leaflet";
-import { LatLngExpression, Map, LatLngTuple } from "leaflet";
+import { LatLngExpression, Map, LatLngTuple } from "leaflet"; // LatLngTuple ถูก import แล้ว
 import "leaflet/dist/leaflet.css";
 
 // Fix Leaflet's default icon path issue with Webpack/Next.js
@@ -40,7 +40,8 @@ const DraggableMarker = ({
   onPositionChange,
 }: {
   position: LatLngExpression;
-  setPosition: (pos: LatLngExpression) => void;
+  // [แก้ไข] เปลี่ยน Type ของ setPosition
+  setPosition: React.Dispatch<React.SetStateAction<LatLngTuple>>;
   onPositionChange: (lat: number, lng: number) => void;
 }) => {
   const markerRef = useRef<L.Marker>(null);
@@ -51,7 +52,8 @@ const DraggableMarker = ({
         const marker = markerRef.current;
         if (marker != null) {
           const newPos = marker.getLatLng();
-          setPosition(newPos);
+          // แปลง newPos (LatLng) เป็น LatLngTuple ก่อนส่งให้ setPosition
+          setPosition([newPos.lat, newPos.lng]);
           onPositionChange(
             parseFloat(newPos.lat.toFixed(6)),
             parseFloat(newPos.lng.toFixed(6))
@@ -78,13 +80,15 @@ const MapClickHandler = ({
   setPosition,
   onPositionChange,
 }: {
-  setPosition: (pos: LatLngExpression) => void;
+  // [แก้ไข] เปลี่ยน Type ของ setPosition
+  setPosition: React.Dispatch<React.SetStateAction<LatLngTuple>>;
   onPositionChange: (lat: number, lng: number) => void;
 }) => {
   const map = useMapEvents({
     click(e) {
       map.flyTo(e.latlng, map.getZoom());
-      setPosition(e.latlng);
+      // แปลง e.latlng (LatLng) เป็น LatLngTuple ก่อนส่งให้ setPosition
+      setPosition([e.latlng.lat, e.latlng.lng]);
       onPositionChange(
         parseFloat(e.latlng.lat.toFixed(6)),
         parseFloat(e.latlng.lng.toFixed(6))
@@ -102,7 +106,7 @@ const FormMapPicker: React.FC<FormMapPickerProps> = ({
   initialLat,
   initialLng,
   onPositionChange,
-  mapRef, // รับ ref มาจาก props
+  mapRef,
 }) => {
   const getInitialPosition = useCallback((): LatLngTuple => {
     const lat =
@@ -136,7 +140,6 @@ const FormMapPicker: React.FC<FormMapPickerProps> = ({
         : SELECTED_ZOOM;
     setCurrentZoom(newZoom);
 
-    // ใช้ flyTo จาก ref ที่ได้รับมาโดยตรง
     if (mapRef?.current) {
       mapRef.current.flyTo(pos, newZoom);
     }
@@ -148,7 +151,6 @@ const FormMapPicker: React.FC<FormMapPickerProps> = ({
       zoom={currentZoom}
       scrollWheelZoom={true}
       style={{ height: "300px", width: "100%", borderRadius: "8px" }}
-      // [แก้ไข] ใช้ ref prop แทน whenReady
       ref={mapRef}
     >
       <TileLayer
@@ -157,11 +159,11 @@ const FormMapPicker: React.FC<FormMapPickerProps> = ({
       />
       <DraggableMarker
         position={markerPosition}
-        setPosition={setMarkerPosition}
+        setPosition={setMarkerPosition} // ส่ง Type ที่ถูกต้องแล้ว
         onPositionChange={onPositionChange}
       />
       <MapClickHandler
-        setPosition={setMarkerPosition}
+        setPosition={setMarkerPosition} // ส่ง Type ที่ถูกต้องแล้ว
         onPositionChange={onPositionChange}
       />
     </MapContainer>
