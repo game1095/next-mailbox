@@ -3,18 +3,20 @@ import { NextResponse, NextRequest } from "next/server";
 
 export async function PUT(
   request: NextRequest,
-  context: { params: { id: string } }
+  // 1. 💡 REVERT: เปลี่ยน Type กลับไปเป็น Promise ตามที่ Vercel ต้องการ
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = context.params;
-    console.log("--- DEBUGGING PUT Request ---");
-    console.log("ID from URL (string):", id);
+    // 2. 💡 REVERT: ใช้ await context.params เพื่อดึง id ออกมาเหมือนเดิม
+    const { id: idFromPromise } = await context.params;
 
-    // 1. รับ body ที่ส่งมา
+    console.log("--- DEBUGGING PUT Request ---");
+    console.log("ID from URL (string):", idFromPromise);
+
     const body = await request.json();
     console.log("Raw body received:", body);
 
-    // 2. แยกฟิลด์ที่ไม่ต้องการอัปเดตออก (เช่น id, created_at)
+    // 3. แยกฟิลด์ที่ไม่ต้องการอัปเดตออก
     const {
       id: bodyId,
       created_at,
@@ -23,30 +25,29 @@ export async function PUT(
       ...updateData
     } = body;
 
-    // 3. --- 💡 จุดแก้ไขใหม่ ---
-    //    แปลง lat/lng ให้เป็นตัวเลข (float) ก่อนเสมอ
-    //    เพราะค่าจาก form อาจเป็น string
+    // 4. 💡 KEEP: ยังคงแปลง lat/lng เป็น number
+    //    (ใช้ parseFloat เพราะ lat/lng เป็นทศนิยม)
     if (updateData.lat !== undefined) {
-      updateData.lat = parseFloat(updateData.lat);
+      updateData.lat = parseFloat(updateData.lat as string);
     }
     if (updateData.lng !== undefined) {
-      updateData.lng = parseFloat(updateData.lng);
+      updateData.lng = parseFloat(updateData.lng as string);
     }
 
     console.log("Cleaned data to update:", updateData);
 
-    // 4. --- 💡 จุดแก้ไขเดิม ---
-    //    แปลง id จาก URL (string) ให้เป็น Number
-    const numericId = Number(id);
+    // 5. 💡 KEEP: ยังคงแปลง id ที่ได้มา (string) ให้เป็น number
+    //    (ใช้ Number เพราะ id เป็นจำนวนเต็ม)
+    const numericId = Number(idFromPromise);
     if (isNaN(numericId)) {
       throw new Error("Invalid ID provided in URL.");
     }
     console.log("Querying Supabase with numeric ID:", numericId);
 
-    // 5. สั่งอัปเดต Supabase
+    // 6. สั่งอัปเดต Supabase
     const { data, error } = await supabase
       .from("mailboxes")
-      .update(updateData) // updateData ตอนนี้มี lat/lng เป็น number แล้ว
+      .update(updateData)
       .eq("id", numericId) // ใช้ numericId ที่แปลงแล้ว
       .select()
       .single();
@@ -64,7 +65,6 @@ export async function PUT(
       errorMessage = error.message;
     }
 
-    // Log error สุดท้ายก่อนส่ง 500
     console.error("Returning 500 Error:", errorMessage, error);
 
     return NextResponse.json({ error: errorMessage }, { status: 500 });
