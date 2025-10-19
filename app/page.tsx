@@ -12,7 +12,7 @@ import React, {
 import {
   PlusCircle,
   Search,
-  MapPin,
+  // MapPin, // [แก้ไข] ลบ MapPin ออก
   Eye,
   Pencil,
   ChevronLeft,
@@ -26,7 +26,7 @@ import {
   ChevronUp,
   ChevronDown,
   AlertTriangle,
-  LocateFixed, // [เพิ่ม] ไอคอนใหม่สำหรับปุ่ม
+  LocateFixed,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { Bar, Pie } from "react-chartjs-2";
@@ -245,7 +245,7 @@ const MailboxMap = dynamic(() => import("@/components/MailboxMap"), {
   ),
 });
 
-// [เพิ่ม] Dynamic Import for FormMapPicker
+// Dynamic Import for FormMapPicker
 const FormMapPicker = dynamic(() => import("@/components/FormMapPicker"), {
   ssr: false,
   loading: () => (
@@ -705,10 +705,8 @@ export default function MailboxApp() {
     const { name, value } = e.target;
     let finalValue: string | number = value;
 
-    // [แก้ไข] แปลง lat/lng เป็น number ถ้ากรอกเข้ามา
     if (name === "lat" || name === "lng") {
       const parsed = parseFloat(value);
-      // ถ้าแปลงเป็นเลขได้ ให้ใช้เลข ถ้าไม่ได้ (เช่น กรอกตัวอักษร) ให้ใช้ string เปล่า
       finalValue = isNaN(parsed) ? "" : parsed;
     } else if (name === "postalCode") {
       finalValue = value.replace(/[^0-9]/g, "");
@@ -767,7 +765,6 @@ export default function MailboxApp() {
   };
 
   const handleMapPositionChange = useCallback((lat: number, lng: number) => {
-    // [แก้ไข] ไม่ต้อง parse อีก เพราะ Component ส่ง number มาให้แล้ว
     setCurrentFormData((prev) => ({
       ...prev,
       lat: lat,
@@ -797,8 +794,8 @@ export default function MailboxApp() {
     e.preventDefault();
     if (
       !currentFormData.landmark ||
-      !currentFormData.lat || // ตรวจสอบว่ามีค่า (ไม่เป็น "" หรือ 0)
-      !currentFormData.lng || // ตรวจสอบว่ามีค่า (ไม่เป็น "" หรือ 0)
+      !currentFormData.lat ||
+      !currentFormData.lng ||
       !currentFormData.postalCode ||
       !currentFormData.postOffice ||
       !currentFormData.jurisdiction ||

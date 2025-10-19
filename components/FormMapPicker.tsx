@@ -5,7 +5,7 @@ import React, {
   useRef,
   useCallback,
   useMemo,
-} from "react"; // <--- แก้ไขบรรทัดนี้
+} from "react";
 import {
   MapContainer,
   TileLayer,
@@ -13,11 +13,14 @@ import {
   useMapEvents,
   Popup,
 } from "react-leaflet";
-import { LatLngExpression, LatLng, Icon, Map } from "leaflet";
+// [แก้ไข] เอา LatLng, Icon ออก เพราะไม่ได้ใช้โดยตรง
+import { LatLngExpression, Map } from "leaflet";
 import "leaflet/dist/leaflet.css";
 
 // Fix Leaflet's default icon path issue with Webpack/Next.js
 import L from "leaflet";
+// [แก้ไข] เพิ่ม eslint-disable comment เพื่อบอก Vercel ให้ข้าม Error บรรทัดนี้
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl:
@@ -30,7 +33,7 @@ interface FormMapPickerProps {
   initialLat?: number | string;
   initialLng?: number | string;
   onPositionChange: (lat: number, lng: number) => void;
-  mapRef?: React.MutableRefObject<Map | null>; // Optional ref for external control
+  mapRef?: React.MutableRefObject<Map | null>;
 }
 
 const DraggableMarker = ({
@@ -45,7 +48,6 @@ const DraggableMarker = ({
   const markerRef = useRef<L.Marker>(null);
 
   const eventHandlers = useMemo(
-    // <-- useMemo ถูก import มาแล้ว
     () => ({
       dragend() {
         const marker = markerRef.current;
@@ -83,7 +85,7 @@ const MapClickHandler = ({
 }) => {
   const map = useMapEvents({
     click(e) {
-      map.flyTo(e.latlng, map.getZoom()); // เคลื่อนแผนที่ไปจุดที่คลิก
+      map.flyTo(e.latlng, map.getZoom());
       setPosition(e.latlng);
       onPositionChange(
         parseFloat(e.latlng.lat.toFixed(6)),
@@ -94,16 +96,17 @@ const MapClickHandler = ({
   return null;
 };
 
+// [แก้ไข] ย้าย THAILAND_CENTER ออกมานอก Component
+const THAILAND_CENTER: LatLngExpression = [13.7563, 100.5018]; // Default center (Bangkok)
+const DEFAULT_ZOOM = 6;
+const SELECTED_ZOOM = 15;
+
 const FormMapPicker: React.FC<FormMapPickerProps> = ({
   initialLat,
   initialLng,
   onPositionChange,
-  mapRef, // Accept the ref
+  mapRef,
 }) => {
-  const THAILAND_CENTER: LatLngExpression = [13.7563, 100.5018]; // Default center (Bangkok)
-  const DEFAULT_ZOOM = 6;
-  const SELECTED_ZOOM = 15;
-
   const getInitialPosition = useCallback((): LatLngExpression => {
     const lat =
       typeof initialLat === "string" ? parseFloat(initialLat) : initialLat;
@@ -118,7 +121,8 @@ const FormMapPicker: React.FC<FormMapPickerProps> = ({
     ) {
       return [lat, lng];
     }
-    return THAILAND_CENTER;
+    return THAILAND_CENTER; // ใช้ Constant ที่อยู่นอก Component
+    // [แก้ไข] เอา THAILAND_CENTER ออกจาก dependency เพราะมันเป็น Constant นอก Component แล้ว
   }, [initialLat, initialLng]);
 
   const [markerPosition, setMarkerPosition] =
@@ -127,20 +131,19 @@ const FormMapPicker: React.FC<FormMapPickerProps> = ({
     initialLat && initialLng ? SELECTED_ZOOM : DEFAULT_ZOOM
   );
 
-  // Update marker and map view when initial coordinates change (e.g., from 'getCurrentLocation')
   useEffect(() => {
     const pos = getInitialPosition();
     setMarkerPosition(pos);
     const newZoom =
-      pos[0] === THAILAND_CENTER[0] && pos[1] === THAILAND_CENTER[1]
+      pos[0] === THAILAND_CENTER[0] && pos[1] === THAILAND_CENTER[1] // ใช้ Constant
         ? DEFAULT_ZOOM
         : SELECTED_ZOOM;
     setCurrentZoom(newZoom);
 
-    // Fly to the new position if map instance exists
     if (mapRef?.current) {
       mapRef.current.flyTo(pos, newZoom);
     }
+    // [แก้ไข] เอา THAILAND_CENTER ออก
   }, [initialLat, initialLng, getInitialPosition, mapRef]);
 
   return (
@@ -151,7 +154,7 @@ const FormMapPicker: React.FC<FormMapPickerProps> = ({
       style={{ height: "300px", width: "100%", borderRadius: "8px" }}
       whenCreated={(mapInstance) => {
         if (mapRef) {
-          mapRef.current = mapInstance; // Store map instance in ref
+          mapRef.current = mapInstance;
         }
       }}
     >
