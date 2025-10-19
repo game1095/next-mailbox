@@ -260,10 +260,12 @@ const Dashboard = ({
   mailboxes,
   jurisdictions,
   onShowOverdueClick,
+  onReportClick, // เพิ่ม Prop นี้
 }: {
   mailboxes: Mailbox[];
   jurisdictions: string[];
   onShowOverdueClick: () => void;
+  onReportClick: (mailboxId: number) => void; // เพิ่ม Prop นี้
 }) => {
   const [dashboardJurisdictionFilter, setDashboardJurisdictionFilter] =
     useState<string>("");
@@ -365,7 +367,8 @@ const Dashboard = ({
     };
   }, [mailboxes, dashboardJurisdictionFilter]);
 
-  const overdueCount = useMemo(() => {
+  // [แก้ไข] เปลี่ยนจาก overdueCount เป็น overdueMailboxes (เก็บ list)
+  const overdueMailboxes = useMemo(() => {
     return mailboxes.filter((m) => {
       const latestCleaningDate = m.cleaningHistory[0]?.date;
       if (!latestCleaningDate) return true;
@@ -377,7 +380,7 @@ const Dashboard = ({
       const diffTime = today.getTime() - lastCleaned.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       return diffDays > 90;
-    }).length;
+    });
   }, [mailboxes]);
 
   return (
@@ -400,20 +403,62 @@ const Dashboard = ({
         </select>
       </div>
 
-      <div
-        onClick={onShowOverdueClick}
-        className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg shadow-sm hover:bg-red-100 transition-colors cursor-pointer"
-      >
-        <div className="flex items-center gap-3">
+      {/* [แก้ไข] ปรับปรุงกล่องสีแดงทั้งหมด */}
+      <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg shadow-sm">
+        <div
+          onClick={onShowOverdueClick}
+          className="flex items-center gap-3 cursor-pointer"
+          title="คลิกเพื่อกรองในตารางด้านบน"
+        >
           <AlertTriangle size={20} className="text-red-600" />
           <h3 className="text-base font-semibold text-red-800">
             ตู้ที่ไม่ได้ทำความสะอาดเกิน 90 วัน
           </h3>
         </div>
         <p className="text-4xl font-bold text-red-600 mt-2">
-          {overdueCount} ตู้
+          {overdueMailboxes.length} ตู้
         </p>
-        <p className="text-xs text-red-500 mt-1">คลิกเพื่อกรอง</p>
+        <p
+          onClick={onShowOverdueClick}
+          className="text-xs text-red-500 mt-1 cursor-pointer hover:underline"
+        >
+          คลิกเพื่อกรองในตาราง
+        </p>
+
+        {/* --- [เพิ่มใหม่] ส่วนแสดงรายชื่อตู้ที่ค้าง --- */}
+        <div className="mt-4 pt-4 border-t border-red-200 space-y-3 max-h-60 overflow-y-auto pr-2">
+          <h4 className="text-sm font-semibold text-slate-700">
+            รายชื่อตู้ที่ค้างดำเนินการ:
+          </h4>
+          {overdueMailboxes.length > 0 ? (
+            overdueMailboxes.map((mailbox) => (
+              <div
+                key={mailbox.id}
+                className="flex justify-between items-center bg-white p-3 rounded-md border border-red-200 shadow-sm"
+              >
+                <div className="pr-2">
+                  <p className="font-semibold text-sm text-slate-700">
+                    {mailbox.postOffice}
+                  </p>
+                  <p className="text-xs text-slate-500 break-words">
+                    {mailbox.landmark}
+                  </p>
+                </div>
+                <button
+                  onClick={() => onReportClick(mailbox.id)}
+                  className="flex-shrink-0 flex items-center gap-1.5 text-xs bg-sky-100 text-sky-700 font-semibold px-3 py-1.5 rounded-md hover:bg-sky-200 transition-colors border border-sky-200"
+                  title="รายงานผลการทำความสะอาด"
+                >
+                  <Camera size={14} />
+                  <span className="hidden sm:inline">รายงาน</span>
+                </button>
+              </div>
+            ))
+          ) : (
+            <p className="text-sm text-slate-600">ไม่มีตู้ที่ค้างทำความสะอาด</p>
+          )}
+        </div>
+        {/* --- จบส่วนที่เพิ่มใหม่ --- */}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
@@ -1281,6 +1326,7 @@ export default function MailboxApp() {
           mailboxes={mailboxes}
           jurisdictions={JURISDICTIONS}
           onShowOverdueClick={handleShowOverdueClick}
+          onReportClick={openReportModal}
         />
       </main>
 
@@ -1629,6 +1675,8 @@ export default function MailboxApp() {
                                         record.afterCleanImage as string
                                       )
                                     }
+                                    Services
+                                    Requested
                                   />
                                 ) : (
                                   <span className="text-slate-400">-</span>
