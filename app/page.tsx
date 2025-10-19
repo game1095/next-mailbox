@@ -7,6 +7,7 @@ import React, {
   FormEvent,
   useEffect,
   useCallback,
+  useRef,
 } from "react";
 import {
   PlusCircle,
@@ -24,7 +25,8 @@ import {
   ArrowUpDown,
   ChevronUp,
   ChevronDown,
-  AlertTriangle, // [เพิ่ม] ไอคอนสำหรับ Card
+  AlertTriangle,
+  LocateFixed, // [เพิ่ม] ไอคอนใหม่สำหรับปุ่ม
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { Bar, Pie } from "react-chartjs-2";
@@ -42,6 +44,7 @@ import {
 } from "chart.js";
 import imageCompression from "browser-image-compression";
 import Image from "next/image";
+import { Map } from "leaflet";
 
 ChartJS.register(
   CategoryScale,
@@ -53,10 +56,8 @@ ChartJS.register(
   ArcElement
 );
 
-// --- [เพิ่ม] --- Type สำหรับประเภทตู้
 type MailboxType = "ก." | "ข." | "ค." | "ง." | "";
 
-// --- Type Definitions ---
 interface CleaningRecord {
   date: Date;
   cleanerName: string;
@@ -69,16 +70,15 @@ interface Mailbox {
   postOffice: string;
   postalCode: string;
   jurisdiction: string;
-  mailboxType: MailboxType; // [เพิ่ม]
+  mailboxType: MailboxType;
   landmark: string;
   lat: number | string;
   lng: number | string;
   cleaningHistory: CleaningRecord[];
 }
 
-// --- API Response Type Definitions (แก้ไข) ---
 interface ApiCleaningRecord {
-  date: string; // Date from JSON will be a string
+  date: string;
   cleanerName: string;
   beforeCleanImage?: string;
   afterCleanImage?: string;
@@ -89,14 +89,13 @@ interface ApiMailbox {
   postOffice: string;
   postalCode: string;
   jurisdiction: string;
-  mailboxType: MailboxType; // [เพิ่ม]
+  mailboxType: MailboxType;
   landmark: string;
   lat: number | string;
   lng: number | string;
-  cleaning_history?: ApiCleaningRecord[]; // Property name from the server
+  cleaning_history?: ApiCleaningRecord[];
 }
 
-// --- Type สำหรับการ Sort
 type SortColumn =
   | "postOffice"
   | "landmark"
@@ -104,8 +103,6 @@ type SortColumn =
   | "latestCleaningDate"
   | null;
 
-// --- Constants ---
-// [เพิ่ม] Array ประเภทตู้
 const MAILBOX_TYPES: MailboxType[] = ["ก.", "ข.", "ค.", "ง."];
 
 const JURISDICTIONS = [
@@ -119,6 +116,7 @@ const JURISDICTIONS = [
   "ปจ.เพชรบูรณ์",
 ];
 const POST_OFFICES = [
+  // ... (รายชื่อ ปณ. เหมือนเดิม) ...
   "ที่ทำการไปรษณีย์นครสวรรค์",
   "ที่ทำการไปรษณีย์สวรรค์วิถี",
   "ที่ทำการไปรษณีย์จิรประวัติ",
@@ -247,15 +245,25 @@ const MailboxMap = dynamic(() => import("@/components/MailboxMap"), {
   ),
 });
 
+// [เพิ่ม] Dynamic Import for FormMapPicker
+const FormMapPicker = dynamic(() => import("@/components/FormMapPicker"), {
+  ssr: false,
+  loading: () => (
+    <div className="h-[300px] w-full bg-slate-200 animate-pulse rounded-md flex items-center justify-center">
+      <p className="text-slate-500">กำลังโหลดแผนที่...</p>
+    </div>
+  ),
+});
+
 // --- Dashboard Component ---
 const Dashboard = ({
   mailboxes,
   jurisdictions,
-  onShowOverdueClick, // [เพิ่ม] Prop
+  onShowOverdueClick,
 }: {
   mailboxes: Mailbox[];
   jurisdictions: string[];
-  onShowOverdueClick: () => void; // [เพิ่ม] Type
+  onShowOverdueClick: () => void;
 }) => {
   const [dashboardJurisdictionFilter, setDashboardJurisdictionFilter] =
     useState<string>("");
@@ -276,7 +284,6 @@ const Dashboard = ({
   };
 
   const postOfficeData: ChartData<"bar"> = useMemo(() => {
-    // [แก้ไข] ย้ายตัวแปร filter ออกมาใช้ร่วมกัน
     const filtered = dashboardJurisdictionFilter
       ? mailboxes.filter((m) => m.jurisdiction === dashboardJurisdictionFilter)
       : mailboxes;
@@ -327,16 +334,13 @@ const Dashboard = ({
     };
   }, [mailboxes]);
 
-  // [เพิ่ม] useMemo สำหรับข้อมูลประเภทตู้
   const mailboxTypeData: ChartData<"pie"> = useMemo(() => {
-    // ใช้ข้อมูลที่ filter สังกัดแล้ว
     const filtered = dashboardJurisdictionFilter
       ? mailboxes.filter((m) => m.jurisdiction === dashboardJurisdictionFilter)
       : mailboxes;
 
     const counts = filtered.reduce((acc, { mailboxType }) => {
       if (mailboxType) {
-        // ตรวจสอบว่ามีข้อมูล
         acc[mailboxType] = (acc[mailboxType] || 0) + 1;
       }
       return acc;
@@ -349,10 +353,10 @@ const Dashboard = ({
           label: "จำนวนตู้",
           data: Object.values(counts),
           backgroundColor: [
-            "rgba(59, 130, 246, 0.7)", // blue
-            "rgba(16, 185, 129, 0.7)", // green
-            "rgba(245, 158, 11, 0.7)", // amber
-            "rgba(139, 92, 246, 0.7)", // violet
+            "rgba(59, 130, 246, 0.7)",
+            "rgba(16, 185, 129, 0.7)",
+            "rgba(245, 158, 11, 0.7)",
+            "rgba(139, 92, 246, 0.7)",
           ],
           borderColor: "#ffffff",
           borderWidth: 2,
@@ -361,11 +365,10 @@ const Dashboard = ({
     };
   }, [mailboxes, dashboardJurisdictionFilter]);
 
-  // [เพิ่ม] คำนวณตู้ที่ค้าง
   const overdueCount = useMemo(() => {
     return mailboxes.filter((m) => {
       const latestCleaningDate = m.cleaningHistory[0]?.date;
-      if (!latestCleaningDate) return true; // ไม่เคยทำความสะอาด = ค้าง
+      if (!latestCleaningDate) return true;
 
       const today = new Date();
       const lastCleaned = new Date(latestCleaningDate);
@@ -397,7 +400,6 @@ const Dashboard = ({
         </select>
       </div>
 
-      {/* [เพิ่ม] Card สรุปตู้ที่ค้าง */}
       <div
         onClick={onShowOverdueClick}
         className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg shadow-sm hover:bg-red-100 transition-colors cursor-pointer"
@@ -414,9 +416,7 @@ const Dashboard = ({
         <p className="text-xs text-red-500 mt-1">คลิกเพื่อกรอง</p>
       </div>
 
-      {/* [แก้ไข] เพิ่ม mt-6 ให้กับ grid กราฟ */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-        {/* กราฟแท่ง (ใช้ 2 ส่วน) */}
         <div className="lg:col-span-2 bg-slate-50 border border-slate-200 rounded-lg p-4">
           <h3 className="font-semibold text-slate-700 text-center">
             จำนวนตู้ฯ แยกตามที่ทำการ
@@ -426,9 +426,7 @@ const Dashboard = ({
           </div>
         </div>
 
-        {/* Wrapper สำหรับกราฟวงกลม 2 อัน (ใช้ 1 ส่วน) */}
         <div className="lg:col-span-1 space-y-6">
-          {/* กราฟวงกลม 1 (สังกัด) */}
           <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
             <h3 className="font-semibold text-slate-700 text-center">
               สัดส่วนตู้ฯ แยกตามสังกัด
@@ -438,7 +436,6 @@ const Dashboard = ({
             </div>
           </div>
 
-          {/* กราฟวงกลม 2 (ประเภทตู้) */}
           <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
             <h3 className="font-semibold text-slate-700 text-center">
               สัดส่วนตู้ฯ แยกตามประเภท
@@ -502,20 +499,16 @@ export default function MailboxApp() {
     try {
       const response = await fetch("/api/mailboxes");
       if (!response.ok) throw new Error("Failed to fetch data");
-      const data: ApiMailbox[] = await response.json(); // แก้ไข: ใช้ ApiMailbox[]
-      const formattedData = data.map((mailbox) => {
-        // แก้ไข: ไม่ต้องระบุ type `any`
-        return {
-          ...mailbox,
-          cleaningHistory: (mailbox.cleaning_history || [])
-            .map((record) => ({
-              // แก้ไข: ไม่ต้องระบุ type `any`
-              ...record,
-              date: new Date(record.date),
-            }))
-            .sort((a, b) => b.date.getTime() - a.date.getTime()), // แก้ไข: ไม่ต้องระบุ type `any`
-        };
-      });
+      const data: ApiMailbox[] = await response.json();
+      const formattedData = data.map((mailbox) => ({
+        ...mailbox,
+        cleaningHistory: (mailbox.cleaning_history || [])
+          .map((record) => ({
+            ...record,
+            date: new Date(record.date),
+          }))
+          .sort((a, b) => b.date.getTime() - a.date.getTime()),
+      }));
       setMailboxes(formattedData);
     } catch (error) {
       console.error("Fetch error:", error);
@@ -566,19 +559,18 @@ export default function MailboxApp() {
   const ITEMS_PER_PAGE = 10;
   const [sortColumn, setSortColumn] = useState<SortColumn>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
-
-  // [เพิ่ม] State สำหรับกรองตู้ที่ค้าง
   const [showOnlyOverdue, setShowOnlyOverdue] = useState(false);
+
+  const formMapRef = useRef<Map | null>(null);
 
   // --- Logic ---
   const filteredMailboxes = useMemo(() => {
     let items = [...mailboxes];
 
-    // [เพิ่ม] กรองตู้ที่เกิน 90 วันก่อน
     if (showOnlyOverdue) {
       items = items.filter((m) => {
         const latestCleaningDate = m.cleaningHistory[0]?.date;
-        if (!latestCleaningDate) return true; // ไม่เคยทำความสะอาด = ค้าง
+        if (!latestCleaningDate) return true;
 
         const today = new Date();
         const lastCleaned = new Date(latestCleaningDate);
@@ -590,20 +582,21 @@ export default function MailboxApp() {
       });
     }
 
-    // กรองตามฟิลเตอร์อื่นๆ (ถ้าตู้ค้างไม่ได้ถูกใช้งาน)
-    if (jurisdictionFilter)
-      items = items.filter((m) => m.jurisdiction === jurisdictionFilter);
-    if (postOfficeFilter)
-      items = items.filter((m) => m.postOffice === postOfficeFilter);
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      items = items.filter(
-        (m) =>
-          m.postOffice.toLowerCase().includes(term) ||
-          m.landmark.toLowerCase().includes(term) ||
-          m.jurisdiction.toLowerCase().includes(term) ||
-          m.postalCode.includes(term)
-      );
+    if (!showOnlyOverdue) {
+      if (jurisdictionFilter)
+        items = items.filter((m) => m.jurisdiction === jurisdictionFilter);
+      if (postOfficeFilter)
+        items = items.filter((m) => m.postOffice === postOfficeFilter);
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        items = items.filter(
+          (m) =>
+            m.postOffice.toLowerCase().includes(term) ||
+            m.landmark.toLowerCase().includes(term) ||
+            m.jurisdiction.toLowerCase().includes(term) ||
+            m.postalCode.includes(term)
+        );
+      }
     }
     return items;
   }, [
@@ -611,7 +604,7 @@ export default function MailboxApp() {
     searchTerm,
     jurisdictionFilter,
     postOfficeFilter,
-    showOnlyOverdue, // [แก้ไข] เพิ่ม dependency
+    showOnlyOverdue,
   ]);
 
   const sortedMailboxes = useMemo(() => {
@@ -669,7 +662,7 @@ export default function MailboxApp() {
     postOfficeFilter,
     sortColumn,
     sortDirection,
-    showOnlyOverdue, // [เพิ่ม]
+    showOnlyOverdue,
   ]);
 
   // --- Handlers ---
@@ -683,7 +676,6 @@ export default function MailboxApp() {
     }
   };
 
-  // [เพิ่ม] ฟังก์ชันสำหรับเคลียร์ Filter อื่นๆ เมื่อกดดูตู้ค้าง
   const handleShowOverdueClick = () => {
     setSearchTerm("");
     setJurisdictionFilter("");
@@ -711,8 +703,17 @@ export default function MailboxApp() {
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    const finalValue =
-      name === "postalCode" ? value.replace(/[^0-9]/g, "") : value;
+    let finalValue: string | number = value;
+
+    // [แก้ไข] แปลง lat/lng เป็น number ถ้ากรอกเข้ามา
+    if (name === "lat" || name === "lng") {
+      const parsed = parseFloat(value);
+      // ถ้าแปลงเป็นเลขได้ ให้ใช้เลข ถ้าไม่ได้ (เช่น กรอกตัวอักษร) ให้ใช้ string เปล่า
+      finalValue = isNaN(parsed) ? "" : parsed;
+    } else if (name === "postalCode") {
+      finalValue = value.replace(/[^0-9]/g, "");
+    }
+
     setCurrentFormData((prev) => ({ ...prev, [name]: finalValue }));
   };
   const handleImageUpload = async (
@@ -750,10 +751,12 @@ export default function MailboxApp() {
     setLocationStatus("กำลังดึงพิกัด...");
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        const lat = parseFloat(position.coords.latitude.toFixed(6));
+        const lng = parseFloat(position.coords.longitude.toFixed(6));
         setCurrentFormData((prev) => ({
           ...prev,
-          lat: position.coords.latitude.toFixed(6),
-          lng: position.coords.longitude.toFixed(6),
+          lat: lat,
+          lng: lng,
         }));
         setLocationStatus("ดึงพิกัดสำเร็จ!");
       },
@@ -762,6 +765,15 @@ export default function MailboxApp() {
       }
     );
   };
+
+  const handleMapPositionChange = useCallback((lat: number, lng: number) => {
+    // [แก้ไข] ไม่ต้อง parse อีก เพราะ Component ส่ง number มาให้แล้ว
+    setCurrentFormData((prev) => ({
+      ...prev,
+      lat: lat,
+      lng: lng,
+    }));
+  }, []);
 
   const openFormModal = (mode: "add" | "edit", mailbox?: Mailbox) => {
     setFormMode(mode);
@@ -785,14 +797,14 @@ export default function MailboxApp() {
     e.preventDefault();
     if (
       !currentFormData.landmark ||
-      !currentFormData.lat ||
-      !currentFormData.lng ||
+      !currentFormData.lat || // ตรวจสอบว่ามีค่า (ไม่เป็น "" หรือ 0)
+      !currentFormData.lng || // ตรวจสอบว่ามีค่า (ไม่เป็น "" หรือ 0)
       !currentFormData.postalCode ||
       !currentFormData.postOffice ||
       !currentFormData.jurisdiction ||
       !currentFormData.mailboxType
     ) {
-      alert("กรุณากรอกข้อมูลให้ครบถ้วน");
+      alert("กรุณากรอกข้อมูลให้ครบถ้วน รวมถึงการเลือก/กรอกพิกัด");
       return;
     }
 
@@ -924,7 +936,9 @@ export default function MailboxApp() {
           </p>
         </header>
 
+        {/* --- ส่วน Filter Controls และ ปุ่ม Add --- */}
         <div className="flex flex-col xl:flex-row justify-between items-center gap-4">
+          {/* ส่วน Filter Controls */}
           <div className="w-full flex-grow flex flex-col sm:flex-row gap-2">
             <div className="relative flex-grow">
               <Search
@@ -936,15 +950,15 @@ export default function MailboxApp() {
                 placeholder="ค้นหา..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                disabled={showOnlyOverdue} // [เพิ่ม] disable เมื่อกรองตู้ค้าง
-                className="w-full pl-10 pr-4 py-2 bg-white border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition shadow-sm disabled:bg-slate-50"
+                disabled={showOnlyOverdue}
+                className="w-full pl-10 pr-4 py-2 bg-white border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition shadow-sm disabled:bg-slate-50 disabled:cursor-not-allowed"
               />
             </div>
             <select
               value={jurisdictionFilter}
               onChange={(e) => setJurisdictionFilter(e.target.value)}
-              disabled={showOnlyOverdue} // [เพิ่ม] disable เมื่อกรองตู้ค้าง
-              className="w-full sm:w-1/3 xl:w-auto p-2 border border-slate-300 rounded-md bg-white focus:ring-2 focus:ring-sky-500 shadow-sm disabled:bg-slate-50"
+              disabled={showOnlyOverdue}
+              className="w-full sm:w-1/3 xl:w-auto p-2 border border-slate-300 rounded-md bg-white focus:ring-2 focus:ring-sky-500 shadow-sm disabled:bg-slate-50 disabled:cursor-not-allowed"
             >
               <option value="">ทุกสังกัด</option>
               {JURISDICTIONS.map((j) => (
@@ -960,15 +974,15 @@ export default function MailboxApp() {
                 placeholder="ทุกที่ทำการ"
                 value={postOfficeFilter}
                 onChange={(e) => setPostOfficeFilter(e.target.value)}
-                disabled={showOnlyOverdue} // [เพิ่ม] disable เมื่อกรองตู้ค้าง
-                className="w-full p-2 pr-8 border border-slate-300 rounded-md bg-white focus:ring-2 focus:ring-sky-500 shadow-sm disabled:bg-slate-50"
+                disabled={showOnlyOverdue}
+                className="w-full p-2 pr-8 border border-slate-300 rounded-md bg-white focus:ring-2 focus:ring-sky-500 shadow-sm disabled:bg-slate-50 disabled:cursor-not-allowed"
               />
               <datalist id="post-offices-list">
                 {POST_OFFICES.map((po) => (
                   <option key={po} value={po} />
                 ))}
               </datalist>
-              {postOfficeFilter && (
+              {postOfficeFilter && !showOnlyOverdue && (
                 <button
                   onClick={() => setPostOfficeFilter("")}
                   className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600"
@@ -977,27 +991,30 @@ export default function MailboxApp() {
                 </button>
               )}
             </div>
+            {/* ปุ่มล้าง Filter (แสดงเมื่อกรองตู้ค้าง) */}
+            {showOnlyOverdue && (
+              <button
+                onClick={() => setShowOnlyOverdue(false)}
+                className="w-full sm:w-auto flex-shrink-0 flex items-center justify-center gap-2 bg-red-100 text-red-700 font-semibold px-4 py-2 rounded-md hover:bg-red-200 transition-colors shadow-sm"
+                title="ล้างตัวกรองตู้ที่ไม่ได้ทำความสะอาดเกิน 90 วัน"
+              >
+                <X size={16} />
+                <span className="hidden sm:inline">ล้างกรอง</span>
+              </button>
+            )}
           </div>
-          {/* [แก้ไข] เปลี่ยนปุ่มเพิ่ม ให้เป็นปุ่มเคลียร์ เมื่อมีการกรองตู้ค้าง */}
-          {showOnlyOverdue ? (
-            <button
-              onClick={() => setShowOnlyOverdue(false)}
-              className="w-full xl:w-auto flex-shrink-0 flex items-center justify-center gap-2 bg-red-100 text-red-700 font-semibold px-5 py-2 rounded-md hover:bg-red-200 transition-all duration-300 shadow-md hover:shadow-lg"
-            >
-              <X size={16} />
-              ล้างตัวกรอง (ค้าง 90+ วัน)
-            </button>
-          ) : (
-            <button
-              onClick={() => openFormModal("add")}
-              className="w-full xl:w-auto flex-shrink-0 flex items-center justify-center gap-2 bg-sky-600 text-white font-semibold px-5 py-2 rounded-md hover:bg-sky-700 transition-all duration-300 shadow-md hover:shadow-lg"
-            >
-              <PlusCircle size={16} />
-              เพิ่มข้อมูล
-            </button>
-          )}
+
+          {/* ปุ่ม Add (แสดงตลอด) */}
+          <button
+            onClick={() => openFormModal("add")}
+            className="w-full xl:w-auto flex-shrink-0 flex items-center justify-center gap-2 bg-sky-600 text-white font-semibold px-5 py-2 rounded-md hover:bg-sky-700 transition-all duration-300 shadow-md hover:shadow-lg"
+          >
+            <PlusCircle size={16} />
+            เพิ่มข้อมูล
+          </button>
         </div>
 
+        {/* --- ส่วนตารางและแผนที่ --- */}
         <div className="flex flex-col lg:flex-row gap-6">
           <div className="lg:w-3/5 w-full flex flex-col">
             <div className="bg-white rounded-xl shadow-lg overflow-hidden flex-grow flex flex-col">
@@ -1235,7 +1252,7 @@ export default function MailboxApp() {
           </div>
         </div>
 
-        {/* [แก้ไข] ส่ง prop onShowOverdueClick ลงไป */}
+        {/* --- ส่วน Dashboard --- */}
         <Dashboard
           mailboxes={mailboxes}
           jurisdictions={JURISDICTIONS}
@@ -1243,6 +1260,7 @@ export default function MailboxApp() {
         />
       </main>
 
+      {/* --- ส่วน Footer --- */}
       <footer className="mt-auto">
         <div className="container mx-auto px-4 sm:px-6 py-6 flex justify-between items-center text-sm text-slate-500 border-t border-slate-200">
           <p className="flex items-center justify-center gap-1.5">
@@ -1260,7 +1278,7 @@ export default function MailboxApp() {
         </div>
       </footer>
 
-      {/* --- Modal Forms --- */}
+      {/* --- ส่วน Modal Forms --- */}
       {isFormModalOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col transform transition-all animate-scale-in">
@@ -1368,45 +1386,63 @@ export default function MailboxApp() {
                   required
                 ></textarea>
               </div>
+
+              {/* --- [แก้ไข] ส่วนของพิกัด --- */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  จุดพิกัด
-                </label>
-                <div className="flex flex-col sm:flex-row items-center gap-2">
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-sm font-medium text-slate-700">
+                    จุดพิกัด
+                  </label>
+                  {/* [แก้ไข] ปรับปุ่มให้เด่นขึ้น */}
+                  <button
+                    type="button"
+                    onClick={getCurrentLocation}
+                    className="flex items-center gap-1.5 text-xs bg-sky-100 text-sky-700 font-semibold px-3 py-1.5 rounded-md hover:bg-sky-200 transition-colors border border-sky-200 shadow-sm"
+                  >
+                    <LocateFixed size={14} /> ใช้ตำแหน่งปัจจุบัน
+                  </button>
+                </div>
+                {/* [เพิ่ม] ช่อง Input สำหรับกรอก Lat/Lng */}
+                <div className="grid grid-cols-2 gap-2 mb-2">
                   <input
                     type="number"
-                    step="any"
+                    step="any" // อนุญาตทศนิยม
                     name="lat"
                     value={currentFormData.lat}
                     onChange={handleFormInputChange}
                     placeholder="ละติจูด"
-                    className="w-full p-2 border border-slate-300 rounded-md shadow-sm"
+                    className="w-full p-2 border border-slate-300 rounded-md shadow-sm font-mono text-sm"
                     required
                   />
                   <input
                     type="number"
-                    step="any"
+                    step="any" // อนุญาตทศนิยม
                     name="lng"
                     value={currentFormData.lng}
                     onChange={handleFormInputChange}
                     placeholder="ลองจิจูด"
-                    className="w-full p-2 border border-slate-300 rounded-md shadow-sm"
+                    className="w-full p-2 border border-slate-300 rounded-md shadow-sm font-mono text-sm"
                     required
                   />
-                  <button
-                    type="button"
-                    onClick={getCurrentLocation}
-                    className="w-full sm:w-auto flex-shrink-0 flex items-center justify-center gap-2 bg-slate-100 text-slate-700 font-medium px-4 py-2 rounded-md hover:bg-slate-200 transition-colors border border-slate-200 shadow-sm"
-                  >
-                    <MapPin size={16} /> พิกัด
-                  </button>
                 </div>
+                {/* แผนที่สำหรับเลือก */}
+                <p className="text-xs text-slate-500 mb-1">
+                  หรือ คลิก/ลากหมุดบนแผนที่:
+                </p>
+                <FormMapPicker
+                  initialLat={currentFormData.lat}
+                  initialLng={currentFormData.lng}
+                  onPositionChange={handleMapPositionChange}
+                  mapRef={formMapRef}
+                />
                 {locationStatus && (
                   <p className="text-xs text-slate-500 mt-2">
                     {locationStatus}
                   </p>
                 )}
               </div>
+              {/* --- จบส่วนพิกัด --- */}
+
               <div className="flex justify-end gap-3 p-4 bg-slate-50 -m-6 mt-6 rounded-b-xl border-t border-slate-200">
                 <button
                   type="button"
