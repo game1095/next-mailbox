@@ -1137,7 +1137,7 @@ export default function MailboxApp() {
                         onClick={() => handleSort("latestCleaningDate")}
                       >
                         <div className="flex items-center">
-                          ล่าสุด
+                          ทำความสะอาด
                           <SortIcon forColumn="latestCleaningDate" />
                         </div>
                       </th>
@@ -1187,7 +1187,7 @@ export default function MailboxApp() {
                             >
                               {latestCleaningDate
                                 ? formatDateToThai(latestCleaningDate)
-                                : "ไม่มีข้อมูล"}
+                                : "ยังไม่มีรายงาน"}
                             </span>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
