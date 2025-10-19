@@ -13,13 +13,12 @@ import {
   useMapEvents,
   Popup,
 } from "react-leaflet";
-// [แก้ไข] เอา LatLng, Icon ออก เพราะไม่ได้ใช้โดยตรง
-import { LatLngExpression, Map } from "leaflet";
+// [แก้ไข] เปลี่ยน import LatLngTuple เพิ่ม
+import { LatLngExpression, Map, LatLngTuple } from "leaflet";
 import "leaflet/dist/leaflet.css";
 
 // Fix Leaflet's default icon path issue with Webpack/Next.js
 import L from "leaflet";
-// [แก้ไข] เพิ่ม eslint-disable comment เพื่อบอก Vercel ให้ข้าม Error บรรทัดนี้
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -96,8 +95,7 @@ const MapClickHandler = ({
   return null;
 };
 
-// [แก้ไข] ย้าย THAILAND_CENTER ออกมานอก Component
-const THAILAND_CENTER: LatLngExpression = [13.7563, 100.5018]; // Default center (Bangkok)
+const THAILAND_CENTER: LatLngTuple = [13.7563, 100.5018]; // Default center (Bangkok)
 const DEFAULT_ZOOM = 6;
 const SELECTED_ZOOM = 15;
 
@@ -107,7 +105,8 @@ const FormMapPicker: React.FC<FormMapPickerProps> = ({
   onPositionChange,
   mapRef,
 }) => {
-  const getInitialPosition = useCallback((): LatLngExpression => {
+  // [แก้ไข] ให้ฟังก์ชันคืนค่าเป็น LatLngTuple เสมอ
+  const getInitialPosition = useCallback((): LatLngTuple => {
     const lat =
       typeof initialLat === "string" ? parseFloat(initialLat) : initialLat;
     const lng =
@@ -119,23 +118,24 @@ const FormMapPicker: React.FC<FormMapPickerProps> = ({
       typeof lng === "number" &&
       !isNaN(lng)
     ) {
-      return [lat, lng];
+      return [lat, lng]; // คืนค่าเป็น Array [number, number]
     }
-    return THAILAND_CENTER; // ใช้ Constant ที่อยู่นอก Component
-    // [แก้ไข] เอา THAILAND_CENTER ออกจาก dependency เพราะมันเป็น Constant นอก Component แล้ว
+    return THAILAND_CENTER;
   }, [initialLat, initialLng]);
 
+  // [แก้ไข] กำหนด Type เริ่มต้นให้ useState เป็น LatLngTuple
   const [markerPosition, setMarkerPosition] =
-    useState<LatLngExpression>(getInitialPosition);
+    useState<LatLngTuple>(getInitialPosition);
   const [currentZoom, setCurrentZoom] = useState(
     initialLat && initialLng ? SELECTED_ZOOM : DEFAULT_ZOOM
   );
 
   useEffect(() => {
-    const pos = getInitialPosition();
+    const pos = getInitialPosition(); // pos จะเป็น LatLngTuple เสมอ
     setMarkerPosition(pos);
+    // ตอนนี้ pos[0] และ pos[1] ใช้งานได้แล้ว
     const newZoom =
-      pos[0] === THAILAND_CENTER[0] && pos[1] === THAILAND_CENTER[1] // ใช้ Constant
+      pos[0] === THAILAND_CENTER[0] && pos[1] === THAILAND_CENTER[1]
         ? DEFAULT_ZOOM
         : SELECTED_ZOOM;
     setCurrentZoom(newZoom);
@@ -143,8 +143,7 @@ const FormMapPicker: React.FC<FormMapPickerProps> = ({
     if (mapRef?.current) {
       mapRef.current.flyTo(pos, newZoom);
     }
-    // [แก้ไข] เอา THAILAND_CENTER ออก
-  }, [initialLat, initialLng, getInitialPosition, mapRef]);
+  }, [initialLat, initialLng, getInitialPosition, mapRef]); // Dependencies ถูกต้องแล้ว
 
   return (
     <MapContainer
@@ -164,11 +163,11 @@ const FormMapPicker: React.FC<FormMapPickerProps> = ({
       />
       <DraggableMarker
         position={markerPosition}
-        setPosition={setMarkerPosition}
+        setPosition={setMarkerPosition} // ส่ง Type ที่ถูกต้อง (LatLngTuple) ไป
         onPositionChange={onPositionChange}
       />
       <MapClickHandler
-        setPosition={setMarkerPosition}
+        setPosition={setMarkerPosition} // ส่ง Type ที่ถูกต้อง (LatLngTuple) ไป
         onPositionChange={onPositionChange}
       />
     </MapContainer>
