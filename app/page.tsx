@@ -21,6 +21,9 @@ import {
   BarChart2,
   Camera,
   CheckCircle,
+  ArrowUpDown, // --- [แก้ไข] --- เพิ่มไอคอน
+  ChevronUp, // --- [แก้ไข] --- เพิ่มไอคอน
+  ChevronDown, // --- [แก้ไข] --- เพิ่มไอคอน
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { Bar, Pie } from "react-chartjs-2";
@@ -86,6 +89,14 @@ interface ApiMailbox {
   lng: number | string;
   cleaning_history?: ApiCleaningRecord[]; // Property name from the server
 }
+
+// --- [แก้ไข] --- Type สำหรับการ Sort
+type SortColumn =
+  | "postOffice"
+  | "landmark"
+  | "jurisdiction"
+  | "latestCleaningDate"
+  | null;
 
 // --- Constants ---
 const JURISDICTIONS = [
@@ -455,6 +466,10 @@ export default function MailboxApp() {
   const [fullImageUrl, setFullImageUrl] = useState("");
   const ITEMS_PER_PAGE = 10;
 
+  // --- [แก้ไข] --- เพิ่ม State สำหรับการ Sort
+  const [sortColumn, setSortColumn] = useState<SortColumn>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
   // --- Logic ---
   const filteredMailboxes = useMemo(() => {
     if (mailboxes.length === 0) return [];
@@ -476,21 +491,84 @@ export default function MailboxApp() {
     return items;
   }, [mailboxes, searchTerm, jurisdictionFilter, postOfficeFilter]);
 
+  // --- [แก้ไข] --- เพิ่ม useMemo สำหรับการ Sort ข้อมูล
+  const sortedMailboxes = useMemo(() => {
+    if (!sortColumn) {
+      return filteredMailboxes;
+    }
+
+    const getLatestDate = (m: Mailbox) => m.cleaningHistory[0]?.date;
+
+    return [...filteredMailboxes].sort((a, b) => {
+      if (sortColumn === "latestCleaningDate") {
+        const aDate = getLatestDate(a);
+        const bDate = getLatestDate(b);
+
+        // --- ตรรกะ: รายการที่ไม่มีวันที่ (null) จะไปอยู่ท้ายสุดเสมอ ---
+        if (aDate && !bDate) return -1;
+        if (!aDate && bDate) return 1;
+        if (!aDate && !bDate) return 0;
+
+        // เมื่อทั้งคู่มีวันที่
+        const comparison =
+          (aDate as Date).getTime() - (bDate as Date).getTime();
+        return sortDirection === "asc" ? comparison : -comparison;
+      }
+
+      if (
+        sortColumn === "postOffice" ||
+        sortColumn === "landmark" ||
+        sortColumn === "jurisdiction"
+      ) {
+        const aVal = a[sortColumn] || "";
+        const bVal = b[sortColumn] || "";
+        // ใช้ localeCompare เพื่อให้เรียงภาษาไทยได้ถูกต้อง
+        const comparison = aVal.localeCompare(bVal, "th");
+        return sortDirection === "asc" ? comparison : -comparison;
+      }
+
+      return 0;
+    });
+  }, [filteredMailboxes, sortColumn, sortDirection]);
+
+  // --- [แก้ไข] --- อัปเดต paginatedMailboxes ให้ใช้ sortedMailboxes
   const paginatedMailboxes = useMemo(() => {
-    return (filteredMailboxes || []).slice(
+    return (sortedMailboxes || []).slice(
       (currentPage - 1) * ITEMS_PER_PAGE,
       (currentPage - 1) * ITEMS_PER_PAGE + ITEMS_PER_PAGE
     );
-  }, [currentPage, filteredMailboxes]);
+  }, [currentPage, sortedMailboxes]); // <--- เปลี่ยนจาก filteredMailboxes
 
+  // --- [แก้ไข] --- totalPages ต้องอิงจาก filteredMailboxes (เพราะ sortedMailboxes มีจำนวนเท่ากัน)
   const totalPages = Math.ceil(
     (filteredMailboxes || []).length / ITEMS_PER_PAGE
   );
+
+  // --- [แก้ไข] --- เพิ่ม dependencies (sortColumn, sortDirection)
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, jurisdictionFilter, postOfficeFilter]);
+  }, [
+    searchTerm,
+    jurisdictionFilter,
+    postOfficeFilter,
+    sortColumn,
+    sortDirection,
+  ]);
 
   // --- Handlers ---
+  // --- [แก้ไข] --- เพิ่มฟังก์ชัน handleSort
+  const handleSort = (column: SortColumn) => {
+    if (!column) return;
+    if (sortColumn === column) {
+      // ถ้าคลิกคอลัมน์เดิม ให้สลับทิศทาง
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      // ถ้าคลิกคอลัมน์ใหม่ ให้เริ่มที่ 'asc'
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
+
   const handleMapSelectionChange = (mailbox: Mailbox, checked: boolean) => {
     setSelectedMapMailboxes((prev) => {
       if (checked) {
@@ -686,6 +764,18 @@ export default function MailboxApp() {
     else return "bg-green-100 text-green-700";
   };
 
+  // --- [แก้ไข] --- เพิ่ม Helper Component สำหรับแสดงไอคอน Sort
+  const SortIcon = ({ forColumn }: { forColumn: SortColumn }) => {
+    if (sortColumn !== forColumn) {
+      return <ArrowUpDown size={14} className="ml-1.5 opacity-30" />;
+    }
+    return sortDirection === "asc" ? (
+      <ChevronUp size={14} className="ml-1.5" />
+    ) : (
+      <ChevronDown size={14} className="ml-1.5" />
+    );
+  };
+
   if (isLoading || !isClient) {
     return (
       <div className="w-screen h-screen bg-slate-50 flex items-center justify-center">
@@ -793,17 +883,42 @@ export default function MailboxApp() {
                           }
                         />
                       </th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-600">
-                        ที่ทำการฯ
+                      {/* --- [แก้ไข] --- อัปเดต <th> ทั้งหมดที่ต้องการให้ Sort ได้ */}
+                      <th
+                        className="px-4 py-3 text-left font-semibold text-slate-600 cursor-pointer hover:bg-slate-100 transition-colors"
+                        onClick={() => handleSort("postOffice")}
+                      >
+                        <div className="flex items-center">
+                          ที่ทำการฯ
+                          <SortIcon forColumn="postOffice" />
+                        </div>
                       </th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-600">
-                        จุดสังเกต
+                      <th
+                        className="px-4 py-3 text-left font-semibold text-slate-600 cursor-pointer hover:bg-slate-100 transition-colors"
+                        onClick={() => handleSort("landmark")}
+                      >
+                        <div className="flex items-center">
+                          จุดสังเกต
+                          <SortIcon forColumn="landmark" />
+                        </div>
                       </th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-600">
-                        สังกัด
+                      <th
+                        className="px-4 py-3 text-left font-semibold text-slate-600 cursor-pointer hover:bg-slate-100 transition-colors"
+                        onClick={() => handleSort("jurisdiction")}
+                      >
+                        <div className="flex items-center">
+                          สังกัด
+                          <SortIcon forColumn="jurisdiction" />
+                        </div>
                       </th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-600">
-                        ล่าสุด
+                      <th
+                        className="px-4 py-3 text-left font-semibold text-slate-600 cursor-pointer hover:bg-slate-100 transition-colors"
+                        onClick={() => handleSort("latestCleaningDate")}
+                      >
+                        <div className="flex items-center">
+                          ล่าสุด
+                          <SortIcon forColumn="latestCleaningDate" />
+                        </div>
                       </th>
                       <th className="px-4 py-3 text-center font-semibold text-slate-600">
                         จัดการ
@@ -917,20 +1032,38 @@ export default function MailboxApp() {
                       >
                         <ChevronLeft className="h-5 w-5" />
                       </button>
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                        (page) => (
-                          <button
-                            key={page}
-                            onClick={() => setCurrentPage(page)}
-                            className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
-                              currentPage === page
-                                ? "z-10 bg-sky-50 border-sky-500 text-sky-600"
-                                : "text-slate-700 hover:bg-slate-50"
-                            }`}
-                          >
-                            {page}
-                          </button>
-                        )
+                      {/* ... โค้ดส่วน Pagination ... (คงเดิม) */}
+                      {Array.from(
+                        {
+                          length: Math.min(totalPages, 5),
+                        }, // แสดงผลสูงสุด 5 หน้า
+                        (_, i) => {
+                          let page;
+                          if (totalPages <= 5) {
+                            page = i + 1;
+                          } else {
+                            if (currentPage <= 3) {
+                              page = i + 1;
+                            } else if (currentPage >= totalPages - 2) {
+                              page = totalPages - 4 + i;
+                            } else {
+                              page = currentPage - 2 + i;
+                            }
+                          }
+                          return (
+                            <button
+                              key={page}
+                              onClick={() => setCurrentPage(page)}
+                              className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
+                                currentPage === page
+                                  ? "z-10 bg-sky-50 border-sky-500 text-sky-600"
+                                  : "text-slate-700 hover:bg-slate-50"
+                              }`}
+                            >
+                              {page}
+                            </button>
+                          );
+                        }
                       )}
                       <button
                         onClick={() =>
@@ -988,6 +1121,7 @@ export default function MailboxApp() {
         </div>
       </footer>
 
+      {/* --- Modal Forms --- (ไม่มีการแก้ไขในส่วนนี้) */}
       {isFormModalOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col transform transition-all animate-scale-in">
