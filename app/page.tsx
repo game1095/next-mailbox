@@ -383,7 +383,9 @@ const Dashboard = ({
   }, [mailboxes]);
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-4 space-y-4">
+    // [แก้ไข] เปลี่ยนจาก grid layout มาเป็น space-y-6 เพื่อให้เรียงตามแนวตั้ง
+    <div className="bg-white rounded-xl shadow-lg p-4 space-y-6">
+      {/* ส่วนหัว Dashboard (เหมือนเดิม) */}
       <div className="flex justify-between items-center">
         <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
           <BarChart2 size={18} /> Dashboard
@@ -402,7 +404,8 @@ const Dashboard = ({
         </select>
       </div>
 
-      <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg shadow-sm">
+      {/* 1. [แถวที่ 1] ตู้ที่ไม่ได้ทำความสะอาด (100%) */}
+      <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg shadow-sm flex flex-col">
         <div
           onClick={onShowOverdueClick}
           className="flex items-center gap-3 cursor-pointer"
@@ -423,8 +426,7 @@ const Dashboard = ({
           คลิกเพื่อกรองในตาราง
         </p>
 
-        {/* --- [แก้ไข] ปรับ Layout และ Style ปุ่มตรงนี้ --- */}
-        <div className="mt-4 pt-4 border-t border-red-200 space-y-3 max-h-60 overflow-y-auto pr-2">
+        <div className="mt-4 pt-4 border-t border-red-200 space-y-3 max-h-96 overflow-y-auto pr-2">
           <h4 className="text-sm font-semibold text-slate-700">
             รายชื่อตู้ที่ค้างดำเนินการ:
           </h4>
@@ -456,36 +458,35 @@ const Dashboard = ({
             <p className="text-sm text-slate-600">ไม่มีตู้ที่ค้างทำความสะอาด</p>
           )}
         </div>
-        {/* --- จบส่วนที่แก้ไข --- */}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-        <div className="lg:col-span-2 bg-slate-50 border border-slate-200 rounded-lg p-4">
+      {/* 2. [แถวที่ 2] กราฟแท่ง (100%) */}
+      <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+        <h3 className="font-semibold text-slate-700 text-center">
+          จำนวนตู้ฯ แยกตามที่ทำการ
+        </h3>
+        <div className="relative h-96 mt-4">
+          <Bar options={chartOptions} data={postOfficeData} />
+        </div>
+      </div>
+
+      {/* 3. [แถวที่ 3] กราฟวงกลม (50% + 50%) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
           <h3 className="font-semibold text-slate-700 text-center">
-            จำนวนตู้ฯ แยกตามที่ทำการ
+            สัดส่วนตู้ฯ แยกตามสังกัด
           </h3>
-          <div className="relative h-96 mt-4">
-            <Bar options={chartOptions} data={postOfficeData} />
+          <div className="relative h-64 mt-4">
+            <Pie options={pieChartOptions} data={jurisdictionData} />
           </div>
         </div>
 
-        <div className="lg:col-span-1 space-y-6">
-          <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
-            <h3 className="font-semibold text-slate-700 text-center">
-              สัดส่วนตู้ฯ แยกตามสังกัด
-            </h3>
-            <div className="relative h-64 mt-4">
-              <Pie options={pieChartOptions} data={jurisdictionData} />
-            </div>
-          </div>
-
-          <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
-            <h3 className="font-semibold text-slate-700 text-center">
-              สัดส่วนตู้ฯ แยกตามประเภท
-            </h3>
-            <div className="relative h-64 mt-4">
-              <Pie options={pieChartOptions} data={mailboxTypeData} />
-            </div>
+        <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+          <h3 className="font-semibold text-slate-700 text-center">
+            สัดส่วนตู้ฯ แยกตามประเภท
+          </h3>
+          <div className="relative h-64 mt-4">
+            <Pie options={pieChartOptions} data={mailboxTypeData} />
           </div>
         </div>
       </div>
@@ -1122,7 +1123,6 @@ export default function MailboxApp() {
                           <SortIcon forColumn="jurisdiction" />
                         </div>
                       </th>
-                      {/* [แก้ไข] เปลี่ยนชื่อคอลัมน์ */}
                       <th
                         className="px-4 py-3 text-left font-semibold text-slate-700 cursor-pointer hover:bg-slate-200 transition-colors"
                         onClick={() => handleSort("latestCleaningDate")}
@@ -1170,7 +1170,6 @@ export default function MailboxApp() {
                           <td className="px-4 py-3 whitespace-nowrap text-slate-500">
                             {mailbox.jurisdiction}
                           </td>
-                          {/* [แก้ไข] เปลี่ยนข้อความ "ไม่มีข้อมูล" */}
                           <td className="px-4 py-3 whitespace-nowrap text-slate-500">
                             <span
                               className={`px-2 py-1 rounded-full text-xs font-medium ${getDateHighlightClass(
