@@ -260,12 +260,12 @@ const Dashboard = ({
   mailboxes,
   jurisdictions,
   onShowOverdueClick,
-  onReportClick, // เพิ่ม Prop นี้
+  onReportClick,
 }: {
   mailboxes: Mailbox[];
   jurisdictions: string[];
   onShowOverdueClick: () => void;
-  onReportClick: (mailboxId: number) => void; // เพิ่ม Prop นี้
+  onReportClick: (mailboxId: number) => void;
 }) => {
   const [dashboardJurisdictionFilter, setDashboardJurisdictionFilter] =
     useState<string>("");
@@ -367,7 +367,6 @@ const Dashboard = ({
     };
   }, [mailboxes, dashboardJurisdictionFilter]);
 
-  // [แก้ไข] เปลี่ยนจาก overdueCount เป็น overdueMailboxes (เก็บ list)
   const overdueMailboxes = useMemo(() => {
     return mailboxes.filter((m) => {
       const latestCleaningDate = m.cleaningHistory[0]?.date;
@@ -403,7 +402,6 @@ const Dashboard = ({
         </select>
       </div>
 
-      {/* [แก้ไข] ปรับปรุงกล่องสีแดงทั้งหมด */}
       <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg shadow-sm">
         <div
           onClick={onShowOverdueClick}
@@ -425,7 +423,7 @@ const Dashboard = ({
           คลิกเพื่อกรองในตาราง
         </p>
 
-        {/* --- [เพิ่มใหม่] ส่วนแสดงรายชื่อตู้ที่ค้าง --- */}
+        {/* --- [แก้ไข] ปรับ Layout และ Style ปุ่มตรงนี้ --- */}
         <div className="mt-4 pt-4 border-t border-red-200 space-y-3 max-h-60 overflow-y-auto pr-2">
           <h4 className="text-sm font-semibold text-slate-700">
             รายชื่อตู้ที่ค้างดำเนินการ:
@@ -434,31 +432,31 @@ const Dashboard = ({
             overdueMailboxes.map((mailbox) => (
               <div
                 key={mailbox.id}
-                className="flex justify-between items-center bg-white p-3 rounded-md border border-red-200 shadow-sm"
+                className="bg-white p-3 rounded-md border border-red-200 shadow-sm"
               >
-                <div className="pr-2">
-                  <p className="font-semibold text-sm text-slate-700">
+                <div className="flex justify-between items-center mb-1.5">
+                  <p className="font-semibold text-sm text-slate-700 pr-2 break-words">
                     {mailbox.postOffice}
                   </p>
-                  <p className="text-xs text-slate-500 break-words">
-                    {mailbox.landmark}
-                  </p>
+                  <button
+                    onClick={() => onReportClick(mailbox.id)}
+                    className="flex-shrink-0 flex items-center gap-1.5 text-xs bg-sky-600 text-white font-semibold px-3 py-1.5 rounded-md hover:bg-sky-700 transition-colors shadow-sm"
+                    title="รายงานผลการทำความสะอาด"
+                  >
+                    <Camera size={14} />
+                    <span className="hidden sm:inline">รายงาน</span>
+                  </button>
                 </div>
-                <button
-                  onClick={() => onReportClick(mailbox.id)}
-                  className="flex-shrink-0 flex items-center gap-1.5 text-xs bg-sky-100 text-sky-700 font-semibold px-3 py-1.5 rounded-md hover:bg-sky-200 transition-colors border border-sky-200"
-                  title="รายงานผลการทำความสะอาด"
-                >
-                  <Camera size={14} />
-                  <span className="hidden sm:inline">รายงาน</span>
-                </button>
+                <p className="text-xs text-slate-500 break-words">
+                  {mailbox.landmark}
+                </p>
               </div>
             ))
           ) : (
             <p className="text-sm text-slate-600">ไม่มีตู้ที่ค้างทำความสะอาด</p>
           )}
         </div>
-        {/* --- จบส่วนที่เพิ่มใหม่ --- */}
+        {/* --- จบส่วนที่แก้ไข --- */}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
@@ -791,19 +789,15 @@ export default function MailboxApp() {
     }
   };
 
-  // [แก้ไข] ปรับ getCurrentLocation ให้รับ callback
   const getCurrentLocation = useCallback(
     (onSuccess?: (lat: number, lng: number) => void) => {
-      // เอา setLocationStatus ออกไปก่อน
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const lat = parseFloat(position.coords.latitude.toFixed(6));
           const lng = parseFloat(position.coords.longitude.toFixed(6));
-          // ถ้ามี callback ให้เรียก callback
           if (onSuccess) {
             onSuccess(lat, lng);
           } else {
-            // ถ้าไม่มี (เช่น กดปุ่ม) ให้ update state โดยตรง
             setCurrentFormData((prev) => ({
               ...prev,
               lat: lat,
@@ -818,7 +812,7 @@ export default function MailboxApp() {
       );
     },
     []
-  ); // เพิ่ม useCallback และ dependency ว่างเปล่า
+  );
 
   const handleMapPositionChange = useCallback((lat: number, lng: number) => {
     setCurrentFormData((prev) => ({
@@ -830,28 +824,24 @@ export default function MailboxApp() {
 
   const openFormModal = (mode: "add" | "edit", mailbox?: Mailbox) => {
     setFormMode(mode);
-    setLocationStatus(""); // เคลียร์ status ก่อนเสมอ
+    setLocationStatus("");
 
     if (mode === "edit" && mailbox) {
       setCurrentFormData(mailbox);
-      setIsFormModalOpen(true); // เปิด modal ก่อน
+      setIsFormModalOpen(true);
     } else {
-      // โหมด Add
-      setCurrentFormData(BLANK_MAILBOX_FORM); // ตั้งค่าเป็นฟอร์มเปล่าก่อน
-      setIsFormModalOpen(true); // เปิด modal
+      setCurrentFormData(BLANK_MAILBOX_FORM);
+      setIsFormModalOpen(true);
 
-      // [แก้ไข] เรียก getCurrentLocation หลังจากเปิด Modal แล้ว
-      // ใช้ setTimeout เล็กน้อยเพื่อให้ Modal แสดงผลเสร็จก่อน
       setTimeout(() => {
         getCurrentLocation((lat, lng) => {
-          // ใช้ callback เพื่อ update state เมื่อได้พิกัด
           setCurrentFormData((prev) => ({
-            ...prev, // คงค่าอื่นๆ ที่อาจกรอกไปแล้ว (ถ้ามี)
+            ...prev,
             lat: lat,
             lng: lng,
           }));
         });
-      }, 100); // รอ 100ms
+      }, 100);
     }
   };
   const closeFormModal = () => setIsFormModalOpen(false);
@@ -1132,12 +1122,13 @@ export default function MailboxApp() {
                           <SortIcon forColumn="jurisdiction" />
                         </div>
                       </th>
+                      {/* [แก้ไข] เปลี่ยนชื่อคอลัมน์ */}
                       <th
                         className="px-4 py-3 text-left font-semibold text-slate-700 cursor-pointer hover:bg-slate-200 transition-colors"
                         onClick={() => handleSort("latestCleaningDate")}
                       >
                         <div className="flex items-center">
-                          ทำความสะอาด
+                          ทำความสะอาดล่าสุด
                           <SortIcon forColumn="latestCleaningDate" />
                         </div>
                       </th>
@@ -1179,6 +1170,7 @@ export default function MailboxApp() {
                           <td className="px-4 py-3 whitespace-nowrap text-slate-500">
                             {mailbox.jurisdiction}
                           </td>
+                          {/* [แก้ไข] เปลี่ยนข้อความ "ไม่มีข้อมูล" */}
                           <td className="px-4 py-3 whitespace-nowrap text-slate-500">
                             <span
                               className={`px-2 py-1 rounded-full text-xs font-medium ${getDateHighlightClass(
@@ -1187,7 +1179,7 @@ export default function MailboxApp() {
                             >
                               {latestCleaningDate
                                 ? formatDateToThai(latestCleaningDate)
-                                : "ยังไม่มีรายงาน"}
+                                : "ยังไม่มีการรายงาน"}
                             </span>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
@@ -1465,7 +1457,7 @@ export default function MailboxApp() {
                   </label>
                   <button
                     type="button"
-                    onClick={() => getCurrentLocation()} // [แก้ไข] เรียกแบบไม่มี callback
+                    onClick={() => getCurrentLocation()}
                     className="flex items-center gap-1.5 text-xs bg-sky-100 text-sky-700 font-semibold px-3 py-1.5 rounded-md hover:bg-sky-200 transition-colors border border-sky-200 shadow-sm"
                   >
                     <LocateFixed size={14} /> ใช้ตำแหน่งปัจจุบัน
