@@ -232,7 +232,7 @@ const formatDateToThai = (date: Date) => {
 const MailboxMap = dynamic(() => import("@/components/MailboxMap"), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-full flex justify-center items-center bg-slate-50">
+    <div className="w-full h-full flex justify-center items-center bg-slate-100">
       <p className="text-slate-500">กำลังโหลดแผนที่...</p>
     </div>
   ),
@@ -315,7 +315,8 @@ const Dashboard = ({
   }, [mailboxes]);
 
   return (
-    <div className="bg-white rounded-lg border border-slate-200 p-4 space-y-4">
+    // [UI] เปลี่ยนจาก border เป็น shadow และเพิ่มความโค้งมน
+    <div className="bg-white rounded-xl shadow-lg p-4 space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
           <BarChart2 size={18} /> Dashboard
@@ -323,7 +324,8 @@ const Dashboard = ({
         <select
           value={dashboardJurisdictionFilter}
           onChange={(e) => setDashboardJurisdictionFilter(e.target.value)}
-          className="p-2 border border-slate-300 rounded-md bg-white text-sm focus:ring-2 focus:ring-sky-500"
+          // [UI] เพิ่ม shadow-sm
+          className="p-2 border border-slate-300 rounded-md bg-white text-sm focus:ring-2 focus:ring-sky-500 shadow-sm"
         >
           <option value="">กรองกราฟตามสังกัด (ทั้งหมด)</option>
           {jurisdictions.map((j) => (
@@ -334,7 +336,8 @@ const Dashboard = ({
         </select>
       </div>
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-2 bg-slate-50 border border-slate-200 rounded-lg p-4">
+        {/* [UI] เปลี่ยนจาก border เป็น default (ไม่มี) เพราะอยู่ใน card อยู่แล้ว */}
+        <div className="xl:col-span-2 bg-slate-50 rounded-lg p-4">
           <h3 className="font-semibold text-slate-700 text-center">
             จำนวนตู้ฯ แยกตามที่ทำการ
           </h3>
@@ -342,7 +345,7 @@ const Dashboard = ({
             <Bar options={chartOptions} data={postOfficeData} />
           </div>
         </div>
-        <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+        <div className="bg-slate-50 rounded-lg p-4">
           <h3 className="font-semibold text-slate-700 text-center">
             สัดส่วนตู้ฯ แยกตามสังกัด
           </h3>
@@ -371,8 +374,9 @@ const Toast = ({
   }, [onClose]);
 
   return (
-    <div className="fixed top-5 right-5 z-[100] bg-slate-800 text-white px-4 py-3 rounded-md shadow-lg flex items-center gap-3 animate-slide-in">
-      <CheckCircle size={20} className="text-green-400" />
+    // [UI] เปลี่ยนดีไซน์ Toast ให้ดู modern ขึ้น
+    <div className="fixed top-5 right-5 z-[100] bg-white text-slate-800 px-4 py-3 rounded-lg shadow-xl border border-slate-200 flex items-center gap-3 animate-slide-in">
+      <CheckCircle size={20} className="text-green-500" />
       <span>{message}</span>
     </div>
   );
@@ -778,14 +782,16 @@ export default function MailboxApp() {
 
   if (isLoading || !isClient) {
     return (
-      <div className="w-screen h-screen bg-slate-50 flex items-center justify-center">
+      // [UI] เปลี่ยน bg
+      <div className="w-screen h-screen bg-slate-100 flex items-center justify-center">
         <p className="text-slate-500 animate-pulse">กำลังโหลด...</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+    // [UI] เปลี่ยน bg
+    <div className="bg-slate-100 text-slate-900 min-h-screen flex flex-col">
       {toast.show && (
         <Toast
           message={toast.message}
@@ -794,10 +800,11 @@ export default function MailboxApp() {
       )}
       <main className="flex-grow container mx-auto p-4 md:p-6 lg:p-8 space-y-6">
         <header>
-          <h1 className="text-3xl font-bold text-slate-900">
+          {/* [UI] เปลี่ยนสี h1 เป็นสีหลัก */}
+          <h1 className="text-3xl font-bold text-sky-700">
             ระบบบันทึกข้อมูลตู้ไปรษณีย์
           </h1>
-          <p className="text-slate-500 mt-1">
+          <p className="text-slate-600 mt-1">
             Mailbox Information Management System
           </p>
         </header>
@@ -814,13 +821,15 @@ export default function MailboxApp() {
                 placeholder="ค้นหา..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-white border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition"
+                // [UI] เพิ่ม shadow-sm
+                className="w-full pl-10 pr-4 py-2 bg-white border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition shadow-sm"
               />
             </div>
+            {/* [UI] เพิ่ม shadow-sm */}
             <select
               value={jurisdictionFilter}
               onChange={(e) => setJurisdictionFilter(e.target.value)}
-              className="w-full sm:w-1/3 xl:w-auto p-2 border border-slate-300 rounded-md bg-white focus:ring-2 focus:ring-sky-500"
+              className="w-full sm:w-1/3 xl:w-auto p-2 border border-slate-300 rounded-md bg-white focus:ring-2 focus:ring-sky-500 shadow-sm"
             >
               <option value="">ทุกสังกัด</option>
               {JURISDICTIONS.map((j) => (
@@ -830,13 +839,14 @@ export default function MailboxApp() {
               ))}
             </select>
             <div className="relative w-full sm:w-1/3 xl:w-auto">
+              {/* [UI] เพิ่ม shadow-sm */}
               <input
                 type="text"
                 list="post-offices-list"
                 placeholder="ทุกที่ทำการ"
                 value={postOfficeFilter}
                 onChange={(e) => setPostOfficeFilter(e.target.value)}
-                className="w-full p-2 pr-8 border border-slate-300 rounded-md bg-white focus:ring-2 focus:ring-sky-500"
+                className="w-full p-2 pr-8 border border-slate-300 rounded-md bg-white focus:ring-2 focus:ring-sky-500 shadow-sm"
               />
               <datalist id="post-offices-list">
                 {POST_OFFICES.map((po) => (
@@ -853,9 +863,10 @@ export default function MailboxApp() {
               )}
             </div>
           </div>
+          {/* [UI] เปลี่ยนปุ่มหลักเป็นสี sky และเพิ่ม shadow */}
           <button
             onClick={() => openFormModal("add")}
-            className="w-full xl:w-auto flex-shrink-0 flex items-center justify-center gap-2 bg-slate-800 text-white font-semibold px-5 py-2 rounded-md hover:bg-slate-700 transition"
+            className="w-full xl:w-auto flex-shrink-0 flex items-center justify-center gap-2 bg-sky-600 text-white font-semibold px-5 py-2 rounded-md hover:bg-sky-700 transition-all duration-300 shadow-md hover:shadow-lg"
           >
             <PlusCircle size={16} />
             เพิ่มข้อมูล
@@ -864,10 +875,12 @@ export default function MailboxApp() {
 
         <div className="flex flex-col lg:flex-row gap-6">
           <div className="lg:w-3/5 w-full flex flex-col">
-            <div className="bg-white rounded-lg border border-slate-200 overflow-hidden flex-grow flex flex-col">
+            {/* [UI] เปลี่ยนจาก border เป็น shadow-lg และเพิ่มความโค้งมน */}
+            <div className="bg-white rounded-xl shadow-lg overflow-hidden flex-grow flex flex-col">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-slate-50">
+                  {/* [UI] เปลี่ยนสี a bit */}
+                  <thead className="bg-slate-100">
                     <tr>
                       <th className="px-4 py-3 w-4">
                         <input
@@ -885,7 +898,7 @@ export default function MailboxApp() {
                       </th>
                       {/* --- [แก้ไข] --- อัปเดต <th> ทั้งหมดที่ต้องการให้ Sort ได้ */}
                       <th
-                        className="px-4 py-3 text-left font-semibold text-slate-600 cursor-pointer hover:bg-slate-100 transition-colors"
+                        className="px-4 py-3 text-left font-semibold text-slate-700 cursor-pointer hover:bg-slate-200 transition-colors"
                         onClick={() => handleSort("postOffice")}
                       >
                         <div className="flex items-center">
@@ -894,7 +907,7 @@ export default function MailboxApp() {
                         </div>
                       </th>
                       <th
-                        className="px-4 py-3 text-left font-semibold text-slate-600 cursor-pointer hover:bg-slate-100 transition-colors"
+                        className="px-4 py-3 text-left font-semibold text-slate-700 cursor-pointer hover:bg-slate-200 transition-colors"
                         onClick={() => handleSort("landmark")}
                       >
                         <div className="flex items-center">
@@ -903,7 +916,7 @@ export default function MailboxApp() {
                         </div>
                       </th>
                       <th
-                        className="px-4 py-3 text-left font-semibold text-slate-600 cursor-pointer hover:bg-slate-100 transition-colors"
+                        className="px-4 py-3 text-left font-semibold text-slate-700 cursor-pointer hover:bg-slate-200 transition-colors"
                         onClick={() => handleSort("jurisdiction")}
                       >
                         <div className="flex items-center">
@@ -912,7 +925,7 @@ export default function MailboxApp() {
                         </div>
                       </th>
                       <th
-                        className="px-4 py-3 text-left font-semibold text-slate-600 cursor-pointer hover:bg-slate-100 transition-colors"
+                        className="px-4 py-3 text-left font-semibold text-slate-700 cursor-pointer hover:bg-slate-200 transition-colors"
                         onClick={() => handleSort("latestCleaningDate")}
                       >
                         <div className="flex items-center">
@@ -920,7 +933,7 @@ export default function MailboxApp() {
                           <SortIcon forColumn="latestCleaningDate" />
                         </div>
                       </th>
-                      <th className="px-4 py-3 text-center font-semibold text-slate-600">
+                      <th className="px-4 py-3 text-center font-semibold text-slate-700">
                         จัดการ
                       </th>
                     </tr>
@@ -930,9 +943,10 @@ export default function MailboxApp() {
                       const latestCleaningDate =
                         mailbox.cleaningHistory[0]?.date;
                       return (
+                        // [UI] เปลี่ยน hover state เป็นสี sky
                         <tr
                           key={mailbox.id}
-                          className="hover:bg-slate-50 transition-colors"
+                          className="hover:bg-sky-50 transition-colors"
                         >
                           <td className="px-4 py-3">
                             <input
@@ -970,24 +984,25 @@ export default function MailboxApp() {
                             </span>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
-                            <div className="flex justify-center items-center gap-2">
+                            <div className="flex justify-center items-center gap-1">
+                              {/* [UI] เพิ่ม hover state ให้ปุ่มไอคอน */}
                               <button
                                 onClick={() => openDetailModal(mailbox)}
-                                className="p-1.5 text-slate-500 hover:text-sky-600"
+                                className="p-2 text-slate-500 hover:bg-slate-100 hover:text-sky-600 rounded-full transition-colors"
                                 title="ดูรายละเอียด"
                               >
                                 <Eye size={16} />
                               </button>
                               <button
                                 onClick={() => openFormModal("edit", mailbox)}
-                                className="p-1.5 text-slate-500 hover:text-sky-600"
+                                className="p-2 text-slate-500 hover:bg-slate-100 hover:text-sky-600 rounded-full transition-colors"
                                 title="แก้ไขข้อมูล"
                               >
                                 <Pencil size={16} />
                               </button>
                               <button
                                 onClick={() => openReportModal(mailbox.id)}
-                                className="p-1.5 text-slate-500 hover:text-sky-600"
+                                className="p-2 text-slate-500 hover:bg-slate-100 hover:text-sky-600 rounded-full transition-colors"
                                 title="รายงานผลการทำความสะอาด"
                               >
                                 <Camera size={16} />
@@ -1001,7 +1016,8 @@ export default function MailboxApp() {
                 </table>
               </div>
               {totalPages > 0 && (
-                <div className="flex items-center justify-between border-t border-slate-200 bg-white px-4 py-3 mt-auto">
+                // [UI] เปลี่ยน bg pagination
+                <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50 px-4 py-3 mt-auto">
                   <div>
                     <p className="text-sm text-slate-500">
                       แสดง{" "}
@@ -1022,13 +1038,14 @@ export default function MailboxApp() {
                     </p>
                   </div>
                   {totalPages > 1 && (
-                    <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm border border-slate-300">
+                    // [UI] ลบ border ออก
+                    <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm">
                       <button
                         onClick={() =>
                           setCurrentPage((p) => Math.max(1, p - 1))
                         }
                         disabled={currentPage === 1}
-                        className="relative inline-flex items-center rounded-l-md px-2 py-2 text-slate-400 hover:bg-slate-50 disabled:opacity-50"
+                        className="relative inline-flex items-center rounded-l-md px-2 py-2 text-slate-400 hover:bg-slate-100 disabled:opacity-50"
                       >
                         <ChevronLeft className="h-5 w-5" />
                       </button>
@@ -1056,8 +1073,8 @@ export default function MailboxApp() {
                               onClick={() => setCurrentPage(page)}
                               className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
                                 currentPage === page
-                                  ? "z-10 bg-sky-50 border-sky-500 text-sky-600"
-                                  : "text-slate-700 hover:bg-slate-50"
+                                  ? "z-10 bg-sky-100 border-sky-500 text-sky-600"
+                                  : "text-slate-700 hover:bg-slate-100"
                               }`}
                             >
                               {page}
@@ -1070,7 +1087,7 @@ export default function MailboxApp() {
                           setCurrentPage((p) => Math.min(totalPages, p + 1))
                         }
                         disabled={currentPage === totalPages}
-                        className="relative inline-flex items-center rounded-r-md px-2 py-2 text-slate-400 hover:bg-slate-50 disabled:opacity-50"
+                        className="relative inline-flex items-center rounded-r-md px-2 py-2 text-slate-400 hover:bg-slate-100 disabled:opacity-50"
                       >
                         <ChevronRight className="h-5 w-5" />
                       </button>
@@ -1090,11 +1107,13 @@ export default function MailboxApp() {
                 : "z-10"
             }`}
           >
-            <div className="bg-white rounded-lg border border-slate-200 overflow-hidden p-4 space-y-4 h-full">
-              <h2 className="text-lg font-semibold text-slate-800">
+            {/* [UI] เปลี่ยนจาก border เป็น shadow-lg และเพิ่มความโค้งมน */}
+            <div className="bg-white rounded-xl shadow-lg overflow-hidden p-4 space-y-4 h-full">
+              <h2 className="text-lg font-semibold text-slate-900">
                 แผนที่แสดงผล ({selectedMapMailboxes.length} รายการ)
               </h2>
-              <div className="w-full h-full min-h-[500px] rounded-md overflow-hidden border border-slate-200">
+              {/* [UI] เพิ่ม shadow-inner และ bg-slate-100 */}
+              <div className="w-full h-full min-h-[500px] rounded-lg overflow-hidden shadow-inner bg-slate-100">
                 <MailboxMap mailboxes={selectedMapMailboxes} />
               </div>
             </div>
@@ -1113,7 +1132,8 @@ export default function MailboxApp() {
             href="https://github.com/game1095/"
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-slate-900 transition-colors"
+            // [UI] เปลี่ยน hover เป็นสีหลัก
+            className="hover:text-sky-600 transition-colors"
             aria-label="GitHub Repository"
           >
             <Github size={20} />
@@ -1121,30 +1141,33 @@ export default function MailboxApp() {
         </div>
       </footer>
 
-      {/* --- Modal Forms --- (ไม่มีการแก้ไขในส่วนนี้) */}
+      {/* --- Modal Forms --- (มีการแก้ไข UI) */}
       {isFormModalOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col transform transition-all animate-scale-in">
-            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-200">
-              <h2 className="text-lg font-semibold text-slate-800">
+          {/* [UI] เพิ่มความโค้งมน */}
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col transform transition-all animate-scale-in">
+            {/* [UI] เพิ่ม padding, เพิ่มขนาดตัวอักษร */}
+            <div className="flex justify-between items-center px-6 py-5 border-b border-slate-200">
+              <h2 className="text-xl font-semibold text-slate-800">
                 {formMode === "add"
                   ? "เพิ่มข้อมูลตู้ไปรษณีย์"
                   : "แก้ไขข้อมูลตู้ไปรษณีย์"}
               </h2>
               <button
                 onClick={closeFormModal}
-                className="p-1 rounded-full text-slate-400 hover:bg-slate-100"
+                className="p-1 rounded-full text-slate-400 hover:bg-slate-200"
               >
-                <X size={18} />
+                <X size={20} />
               </button>
             </div>
             <form
               onSubmit={handleFormSubmit}
-              className="p-6 space-y-4 overflow-y-auto"
+              // [UI] เพิ่ม p-6 และ space-y-5
+              className="p-6 space-y-5 overflow-y-auto"
             >
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-600 mb-1">
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
                     ที่ทำการไปรษณีย์
                   </label>
                   <input
@@ -1153,7 +1176,8 @@ export default function MailboxApp() {
                     list="form-post-offices-list"
                     value={currentFormData.postOffice}
                     onChange={handleFormInputChange}
-                    className="w-full p-2 border border-slate-300 rounded-md"
+                    // [UI] เพิ่ม shadow-sm
+                    className="w-full p-2 border border-slate-300 rounded-md shadow-sm"
                     required
                   />
                   <datalist id="form-post-offices-list">
@@ -1163,7 +1187,7 @@ export default function MailboxApp() {
                   </datalist>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-600 mb-1">
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
                     รหัสไปรษณีย์
                   </label>
                   <input
@@ -1173,20 +1197,22 @@ export default function MailboxApp() {
                     onChange={handleFormInputChange}
                     maxLength={5}
                     placeholder="5 หลัก"
-                    className="w-full p-2 border border-slate-300 rounded-md"
+                    // [UI] เพิ่ม shadow-sm
+                    className="w-full p-2 border border-slate-300 rounded-md shadow-sm"
                     required
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1">
+                <label className="block text-sm font-medium text-slate-700 mb-1">
                   สังกัด
                 </label>
                 <select
                   name="jurisdiction"
                   value={currentFormData.jurisdiction}
                   onChange={handleFormInputChange}
-                  className="w-full p-2 border border-slate-300 rounded-md"
+                  // [UI] เพิ่ม shadow-sm
+                  className="w-full p-2 border border-slate-300 rounded-md shadow-sm"
                   required
                 >
                   <option value="">-- เลือก --</option>
@@ -1198,7 +1224,7 @@ export default function MailboxApp() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1">
+                <label className="block text-sm font-medium text-slate-700 mb-1">
                   จุดสังเกตที่ตั้ง
                 </label>
                 <textarea
@@ -1206,12 +1232,13 @@ export default function MailboxApp() {
                   value={currentFormData.landmark}
                   onChange={handleFormInputChange}
                   rows={3}
-                  className="w-full p-2 border border-slate-300 rounded-md"
+                  // [UI] เพิ่ม shadow-sm
+                  className="w-full p-2 border border-slate-300 rounded-md shadow-sm"
                   required
                 ></textarea>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1">
+                <label className="block text-sm font-medium text-slate-700 mb-1">
                   จุดพิกัด
                 </label>
                 <div className="flex flex-col sm:flex-row items-center gap-2">
@@ -1222,7 +1249,8 @@ export default function MailboxApp() {
                     value={currentFormData.lat}
                     onChange={handleFormInputChange}
                     placeholder="ละติจูด"
-                    className="w-full p-2 border border-slate-300 rounded-md"
+                    // [UI] เพิ่ม shadow-sm
+                    className="w-full p-2 border border-slate-300 rounded-md shadow-sm"
                     required
                   />
                   <input
@@ -1232,13 +1260,15 @@ export default function MailboxApp() {
                     value={currentFormData.lng}
                     onChange={handleFormInputChange}
                     placeholder="ลองจิจูด"
-                    className="w-full p-2 border border-slate-300 rounded-md"
+                    // [UI] เพิ่ม shadow-sm
+                    className="w-full p-2 border border-slate-300 rounded-md shadow-sm"
                     required
                   />
                   <button
                     type="button"
                     onClick={getCurrentLocation}
-                    className="w-full sm:w-auto flex-shrink-0 flex items-center justify-center gap-2 bg-slate-100 text-slate-600 font-medium px-4 py-2 rounded-md hover:bg-slate-200"
+                    // [UI] ปรับปุ่ม
+                    className="w-full sm:w-auto flex-shrink-0 flex items-center justify-center gap-2 bg-slate-100 text-slate-700 font-medium px-4 py-2 rounded-md hover:bg-slate-200 transition-colors border border-slate-200 shadow-sm"
                   >
                     <MapPin size={16} /> พิกัด
                   </button>
@@ -1249,17 +1279,18 @@ export default function MailboxApp() {
                   </p>
                 )}
               </div>
-              <div className="flex justify-end gap-2 pt-4 border-t border-slate-200">
+              {/* [UI] เพิ่ม bg-slate-50 ให้ footer และปรับปุ่ม */}
+              <div className="flex justify-end gap-3 p-4 bg-slate-50 -m-6 mt-6 rounded-b-xl border-t border-slate-200">
                 <button
                   type="button"
                   onClick={closeFormModal}
-                  className="px-5 py-2 bg-slate-200 text-slate-800 font-semibold rounded-md hover:bg-slate-300"
+                  className="px-5 py-2 bg-white text-slate-700 font-semibold rounded-md hover:bg-slate-100 transition-colors border border-slate-300 shadow-sm"
                 >
                   ยกเลิก
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-slate-800 text-white font-semibold rounded-md hover:bg-slate-700"
+                  className="px-5 py-2 bg-sky-600 text-white font-semibold rounded-md hover:bg-sky-700 transition-colors shadow-md hover:shadow-lg"
                 >
                   บันทึก
                 </button>
@@ -1270,16 +1301,18 @@ export default function MailboxApp() {
       )}
       {isDetailModalOpen && selectedMailbox && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] flex flex-col transform transition-all animate-scale-in">
-            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-200">
-              <h2 className="text-lg font-semibold text-slate-800">
+          {/* [UI] เพิ่มความโค้งมน */}
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-5xl max-h-[90vh] flex flex-col transform transition-all animate-scale-in">
+            {/* [UI] เพิ่ม padding, เพิ่มขนาดตัวอักษร */}
+            <div className="flex justify-between items-center px-6 py-5 border-b border-slate-200">
+              <h2 className="text-xl font-semibold text-slate-800">
                 รายละเอียดตู้ไปรษณีย์
               </h2>
               <button
                 onClick={closeDetailModal}
-                className="p-1 rounded-full text-slate-400 hover:bg-slate-100"
+                className="p-1 rounded-full text-slate-400 hover:bg-slate-200"
               >
-                <X size={18} />
+                <X size={20} />
               </button>
             </div>
             <div className="p-6 overflow-y-auto">
@@ -1323,8 +1356,8 @@ export default function MailboxApp() {
                   <h3 className="text-sm font-semibold text-slate-500 mb-2">
                     ตำแหน่งบนแผนที่
                   </h3>
-                  <div className="w-full h-96 rounded-md overflow-hidden border border-slate-200">
-                    {/* แก้ไข: ปรับปรุง URL ของ iframe ให้ถูกต้อง */}
+                  {/* [UI] เพิ่มความโค้งมน */}
+                  <div className="w-full h-96 rounded-lg overflow-hidden border border-slate-200 shadow-inner bg-slate-100">
                     <iframe
                       width="100%"
                       height="100%"
@@ -1342,23 +1375,25 @@ export default function MailboxApp() {
                 {selectedMailbox.cleaningHistory.length === 0 ? (
                   <p className="text-slate-500">ยังไม่มีประวัติ</p>
                 ) : (
-                  <div className="overflow-x-auto rounded-lg border border-slate-200">
+                  // [UI] เพิ่มความโค้งมน
+                  <div className="overflow-x-auto rounded-xl border border-slate-200">
                     <table className="w-full text-sm">
-                      <thead className="bg-slate-50">
+                      {/* [UI] เปลี่ยนสี bg */}
+                      <thead className="bg-slate-100">
                         <tr>
-                          <th className="px-4 py-2 text-left font-semibold text-slate-600 w-12">
+                          <th className="px-4 py-3 text-left font-semibold text-slate-700 w-12">
                             ลำดับ
                           </th>
-                          <th className="px-4 py-2 text-left font-semibold text-slate-600">
+                          <th className="px-4 py-3 text-left font-semibold text-slate-700">
                             วันที่
                           </th>
-                          <th className="px-4 py-2 text-center font-semibold text-slate-600">
+                          <th className="px-4 py-3 text-center font-semibold text-slate-700">
                             ก่อนทำ
                           </th>
-                          <th className="px-4 py-2 text-center font-semibold text-slate-600">
+                          <th className="px-4 py-3 text-center font-semibold text-slate-700">
                             หลังทำ
                           </th>
-                          <th className="px-4 py-2 text-left font-semibold text-slate-600">
+                          <th className="px-4 py-3 text-left font-semibold text-slate-700">
                             ผู้รับผิดชอบ
                           </th>
                         </tr>
@@ -1366,7 +1401,11 @@ export default function MailboxApp() {
                       <tbody className="divide-y divide-slate-200">
                         {selectedMailbox.cleaningHistory.map(
                           (record, index) => (
-                            <tr key={index} className="hover:bg-slate-50">
+                            // [UI] เปลี่ยนสี hover
+                            <tr
+                              key={index}
+                              className="hover:bg-sky-50 transition-colors"
+                            >
                               <td className="px-4 py-3 whitespace-nowrap text-slate-800 font-medium">
                                 {index + 1}
                               </td>
@@ -1380,7 +1419,8 @@ export default function MailboxApp() {
                                     alt="Before"
                                     width={64}
                                     height={64}
-                                    className="w-16 h-16 object-cover rounded-md cursor-pointer mx-auto border"
+                                    // [UI] เพิ่มความโค้งมน
+                                    className="w-16 h-16 object-cover rounded-lg cursor-pointer mx-auto border"
                                     onClick={() =>
                                       openImageModal(
                                         record.beforeCleanImage as string
@@ -1398,7 +1438,8 @@ export default function MailboxApp() {
                                     alt="After"
                                     width={64}
                                     height={64}
-                                    className="w-16 h-16 object-cover rounded-md cursor-pointer mx-auto border"
+                                    // [UI] เพิ่มความโค้งมน
+                                    className="w-16 h-16 object-cover rounded-lg cursor-pointer mx-auto border"
                                     onClick={() =>
                                       openImageModal(
                                         record.afterCleanImage as string
@@ -1421,11 +1462,12 @@ export default function MailboxApp() {
                 )}
               </div>
             </div>
-            <div className="flex justify-end gap-2 p-4 border-t border-slate-200">
+            {/* [UI] ปรับปุ่ม Close */}
+            <div className="flex justify-end gap-3 p-4 bg-slate-50 rounded-b-xl border-t border-slate-200">
               <button
                 type="button"
                 onClick={closeDetailModal}
-                className="px-5 py-2 bg-slate-200 text-slate-800 font-semibold rounded-md hover:bg-slate-300"
+                className="px-5 py-2 bg-white text-slate-700 font-semibold rounded-md hover:bg-slate-100 transition-colors border border-slate-300 shadow-sm"
               >
                 ปิด
               </button>
@@ -1435,43 +1477,48 @@ export default function MailboxApp() {
       )}
       {isReportModalOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col transform transition-all animate-scale-in">
-            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-200">
-              <h2 className="text-lg font-semibold text-slate-800">
+          {/* [UI] เพิ่มความโค้งมน */}
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col transform transition-all animate-scale-in">
+            {/* [UI] เพิ่ม padding, เพิ่มขนาดตัวอักษร */}
+            <div className="flex justify-between items-center px-6 py-5 border-b border-slate-200">
+              <h2 className="text-xl font-semibold text-slate-800">
                 รายงานผลการทำความสะอาด
               </h2>
               <button
                 onClick={closeReportModal}
-                className="p-1 rounded-full text-slate-400 hover:bg-slate-100"
+                className="p-1 rounded-full text-slate-400 hover:bg-slate-200"
               >
-                <X size={18} />
+                <X size={20} />
               </button>
             </div>
             <form
               onSubmit={handleReportSubmit}
-              className="p-6 space-y-4 overflow-y-auto"
+              // [UI] เพิ่ม p-6 และ space-y-5
+              className="p-6 space-y-5 overflow-y-auto"
             >
               <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1">
+                <label className="block text-sm font-medium text-slate-700 mb-1">
                   วันที่รายงาน
                 </label>
                 <input
                   type="date"
                   value={reportDate}
                   onChange={(e) => setReportDate(e.target.value)}
-                  className="w-full p-2 border border-slate-300 rounded-md"
+                  // [UI] เพิ่ม shadow-sm
+                  className="w-full p-2 border border-slate-300 rounded-md shadow-sm"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1">
+                <label className="block text-sm font-medium text-slate-700 mb-1">
                   รูปภาพก่อนทำความสะอาด
                 </label>
+                {/* [UI] ปรับสี file input */}
                 <input
                   type="file"
                   accept="image/*"
                   onChange={(e) => handleImageUpload(e, "before")}
-                  className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100"
+                  className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-sky-100 file:text-sky-700 hover:file:bg-sky-200"
                   required
                 />
                 {uploadProgress.before > 0 && (
@@ -1488,19 +1535,21 @@ export default function MailboxApp() {
                     alt="Before Preview"
                     width={128}
                     height={128}
-                    className="mt-2 w-32 h-32 object-cover rounded-md border"
+                    // [UI] เพิ่มความโค้งมน
+                    className="mt-2 w-32 h-32 object-cover rounded-lg border"
                   />
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1">
+                <label className="block text-sm font-medium text-slate-700 mb-1">
                   รูปภาพหลังทำความสะอาด
                 </label>
+                {/* [UI] ปรับสี file input */}
                 <input
                   type="file"
                   accept="image/*"
                   onChange={(e) => handleImageUpload(e, "after")}
-                  className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100"
+                  className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-sky-100 file:text-sky-700 hover:file:bg-sky-200"
                   required
                 />
                 {uploadProgress.after > 0 && (
@@ -1517,34 +1566,37 @@ export default function MailboxApp() {
                     alt="After Preview"
                     width={128}
                     height={128}
-                    className="mt-2 w-32 h-32 object-cover rounded-md border"
+                    // [UI] เพิ่มความโค้งมน
+                    className="mt-2 w-32 h-32 object-cover rounded-lg border"
                   />
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1">
+                <label className="block text-sm font-medium text-slate-700 mb-1">
                   ชื่อผู้รายงาน/ผู้ทำความสะอาด
                 </label>
                 <input
                   type="text"
                   value={reportCleanerName}
                   onChange={(e) => setReportCleanerName(e.target.value)}
-                  className="w-full p-2 border border-slate-300 rounded-md"
+                  // [UI] เพิ่ม shadow-sm
+                  className="w-full p-2 border border-slate-300 rounded-md shadow-sm"
                   placeholder="เช่น ทีมงาน A, เจ้าหน้าที่ สมชาย"
                   required
                 />
               </div>
-              <div className="flex justify-end gap-2 pt-4 border-t border-slate-200">
+              {/* [UI] เพิ่ม bg-slate-50 ให้ footer และปรับปุ่ม */}
+              <div className="flex justify-end gap-3 p-4 bg-slate-50 -m-6 mt-6 rounded-b-xl border-t border-slate-200">
                 <button
                   type="button"
                   onClick={closeReportModal}
-                  className="px-5 py-2 bg-slate-200 text-slate-800 font-semibold rounded-md hover:bg-slate-300"
+                  className="px-5 py-2 bg-white text-slate-700 font-semibold rounded-md hover:bg-slate-100 transition-colors border border-slate-300 shadow-sm"
                 >
                   ยกเลิก
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-slate-800 text-white font-semibold rounded-md hover:bg-slate-700"
+                  className="px-5 py-2 bg-sky-600 text-white font-semibold rounded-md hover:bg-sky-700 transition-colors shadow-md hover:shadow-lg"
                 >
                   บันทึกรายงาน
                 </button>
@@ -1567,11 +1619,12 @@ export default function MailboxApp() {
               alt="Full Screen"
               width={1920}
               height={1080}
-              className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl border-4 border-white"
+              // [UI] เพิ่มความโค้งมน
+              className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl border-4 border-white"
             />
             <button
               onClick={closeImageModal}
-              className="absolute top-4 right-4 p-2 rounded-full bg-white text-slate-800 hover:bg-slate-100 z-10"
+              className="absolute -top-2 -right-2 p-2 rounded-full bg-white text-slate-800 hover:bg-slate-100 z-10 shadow-lg"
             >
               <X size={24} />
             </button>
