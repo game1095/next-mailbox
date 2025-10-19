@@ -1675,8 +1675,6 @@ export default function MailboxApp() {
                                         record.afterCleanImage as string
                                       )
                                     }
-                                    Services
-                                    Requested
                                   />
                                 ) : (
                                   <span className="text-slate-400">-</span>
