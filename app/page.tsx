@@ -12,7 +12,6 @@ import React, {
 import {
   PlusCircle,
   Search,
-  // MapPin, // ไม่ได้ใช้แล้ว
   Eye,
   Pencil,
   ChevronLeft,
@@ -27,6 +26,7 @@ import {
   ChevronDown,
   AlertTriangle,
   LocateFixed,
+  Info, // เพิ่มไอคอน Info
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { Bar, Pie } from "react-chartjs-2";
@@ -270,14 +270,12 @@ const Dashboard = ({
   const [dashboardJurisdictionFilter, setDashboardJurisdictionFilter] =
     useState<string>("");
 
-  // [ปรับปรุง] กรอง mailboxes ตาม filter ก่อนสำหรับใช้ใน useMemo อื่นๆ
   const filteredMailboxesForDashboard = useMemo(() => {
     return dashboardJurisdictionFilter
       ? mailboxes.filter((m) => m.jurisdiction === dashboardJurisdictionFilter)
       : mailboxes;
   }, [mailboxes, dashboardJurisdictionFilter]);
 
-  // --- Options and Data for existing charts ---
   const chartOptions: ChartOptions<"bar"> = {
     responsive: true,
     maintainAspectRatio: false,
@@ -293,7 +291,6 @@ const Dashboard = ({
     plugins: { legend: { position: "top" as const } },
   };
 
-  // ใช้ filteredMailboxesForDashboard
   const postOfficeData: ChartData<"bar"> = useMemo(() => {
     const counts = filteredMailboxesForDashboard.reduce(
       (acc, { postOffice }) => {
@@ -314,9 +311,8 @@ const Dashboard = ({
         },
       ],
     };
-  }, [filteredMailboxesForDashboard]); // เปลี่ยน dependency
+  }, [filteredMailboxesForDashboard]);
 
-  // กราฟนี้ไม่ควร filter ตามสังกัด เพราะต้องการแสดงสัดส่วนทั้งหมด
   const jurisdictionData: ChartData<"pie"> = useMemo(() => {
     const counts = mailboxes.reduce((acc, { jurisdiction }) => {
       acc[jurisdiction] = (acc[jurisdiction] || 0) + 1;
@@ -343,9 +339,8 @@ const Dashboard = ({
         },
       ],
     };
-  }, [mailboxes]); // ใช้ mailboxes เดิม
+  }, [mailboxes]);
 
-  // ใช้ filteredMailboxesForDashboard
   const mailboxTypeData: ChartData<"pie"> = useMemo(() => {
     const counts = filteredMailboxesForDashboard.reduce(
       (acc, { mailboxType }) => {
@@ -356,7 +351,6 @@ const Dashboard = ({
       },
       {} as Record<string, number>
     );
-
     return {
       labels: Object.keys(counts),
       datasets: [
@@ -374,14 +368,12 @@ const Dashboard = ({
         },
       ],
     };
-  }, [filteredMailboxesForDashboard]); // เปลี่ยน dependency
+  }, [filteredMailboxesForDashboard]);
 
-  // [ปรับปรุง] ใช้ filteredMailboxesForDashboard ในการหา overdue
   const overdueMailboxes = useMemo(() => {
     return filteredMailboxesForDashboard.filter((m) => {
       const latestCleaningDate = m.cleaningHistory[0]?.date;
       if (!latestCleaningDate) return true;
-
       const today = new Date();
       const lastCleaned = new Date(latestCleaningDate);
       today.setHours(0, 0, 0, 0);
@@ -390,14 +382,12 @@ const Dashboard = ({
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       return diffDays > 90;
     });
-  }, [filteredMailboxesForDashboard]); // เปลี่ยน dependency
+  }, [filteredMailboxesForDashboard]);
 
-  // [ปรับปรุง] ใช้ filteredMailboxesForDashboard และ overdueMailboxes ที่กรองแล้ว
   const comparisonChartData: ChartData<"bar"> = useMemo(() => {
-    const total = filteredMailboxesForDashboard.length; // ใช้ total ที่กรองแล้ว
-    const overdue = overdueMailboxes.length; // ใช้ overdue ที่กรองแล้ว
+    const total = filteredMailboxesForDashboard.length;
+    const overdue = overdueMailboxes.length;
     const clean = total - overdue;
-
     return {
       labels: ["ตู้ที่รายงานแล้ว (ปกติ)", "ตู้ที่ค้างรายงาน (เกิน 90 วัน)"],
       datasets: [
@@ -405,15 +395,15 @@ const Dashboard = ({
           label: "จำนวนตู้",
           data: [clean, overdue],
           backgroundColor: [
-            "rgba(16, 185, 129, 0.7)", // Green
-            "rgba(239, 68, 68, 0.7)", // Red
+            "rgba(16, 185, 129, 0.7)",
+            "rgba(239, 68, 68, 0.7)",
           ],
           borderColor: ["rgba(16, 185, 129, 1)", "rgba(239, 68, 68, 1)"],
           borderWidth: 1,
         },
       ],
     };
-  }, [filteredMailboxesForDashboard, overdueMailboxes]); // เปลี่ยน dependency
+  }, [filteredMailboxesForDashboard, overdueMailboxes]);
 
   const comparisonChartOptions: ChartOptions<"bar"> = {
     responsive: true,
@@ -423,7 +413,6 @@ const Dashboard = ({
       legend: { display: false },
       title: {
         display: true,
-        // [ปรับปรุง] แสดง total ที่กรองแล้ว
         text: `ภาพรวมตู้${
           dashboardJurisdictionFilter
             ? `ใน ${dashboardJurisdictionFilter}`
@@ -432,14 +421,11 @@ const Dashboard = ({
         font: { size: 14 },
       },
     },
-    scales: {
-      x: { beginAtZero: true, ticks: { precision: 0 } },
-    },
+    scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
   };
 
   return (
     <div className="bg-white rounded-xl shadow-lg p-4 space-y-6">
-      {/* ส่วนหัว Dashboard */}
       <div className="flex justify-between items-center">
         <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
           <BarChart2 size={18} /> Dashboard
@@ -449,8 +435,7 @@ const Dashboard = ({
           onChange={(e) => setDashboardJurisdictionFilter(e.target.value)}
           className="p-2 border border-slate-300 rounded-md bg-white text-sm focus:ring-2 focus:ring-sky-500 shadow-sm"
         >
-          <option value="">กรองตามสังกัด (ทั้งหมด)</option>{" "}
-          {/* ปรับข้อความเล็กน้อย */}
+          <option value="">กรองตามสังกัด (ทั้งหมด)</option>
           {jurisdictions.map((j) => (
             <option key={j} value={j}>
               {j}
@@ -459,11 +444,7 @@ const Dashboard = ({
         </select>
       </div>
 
-      {/* --- Layout เดิม (ตาม request ล่าสุด) --- */}
-
-      {/* 1. [แถวที่ 1] ตู้ค้าง (40%) + กราฟเปรียบเทียบ (60%) */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        {/* 1.1 ตู้ค้าง (40%) */}
         <div className="lg:col-span-2 bg-red-50 border-l-4 border-red-500 p-4 rounded-lg shadow-sm flex flex-col">
           <div
             onClick={onShowOverdueClick}
@@ -476,7 +457,7 @@ const Dashboard = ({
             </h3>
           </div>
           <p className="text-4xl font-bold text-red-600 mt-2">
-            {overdueMailboxes.length} ตู้ {/* แสดงจำนวนที่กรองแล้ว */}
+            {overdueMailboxes.length} ตู้
           </p>
           <p
             onClick={onShowOverdueClick}
@@ -484,10 +465,9 @@ const Dashboard = ({
           >
             คลิกเพื่อกรองในตาราง
           </p>
-
           <div className="mt-4 pt-4 border-t border-red-200 space-y-3 max-h-[350px] overflow-y-auto pr-2 flex-grow">
             <h4 className="text-sm font-semibold text-slate-700">
-              รายชื่อตู้ที่ค้างดำเนินการ: {/* แสดงรายการที่กรองแล้ว */}
+              รายชื่อตู้ที่ค้างดำเนินการ:
             </h4>
             {overdueMailboxes.length > 0 ? (
               overdueMailboxes.map((mailbox) => (
@@ -504,7 +484,7 @@ const Dashboard = ({
                       className="flex-shrink-0 flex items-center gap-1.5 text-xs bg-sky-600 text-white font-semibold px-3 py-1.5 rounded-md hover:bg-sky-700 transition-colors shadow-sm"
                       title="รายงานผลการทำความสะอาด"
                     >
-                      <Camera size={14} />
+                      <Camera size={14} />{" "}
                       <span className="hidden sm:inline">รายงาน</span>
                     </button>
                   </div>
@@ -523,19 +503,13 @@ const Dashboard = ({
             )}
           </div>
         </div>
-
-        {/* 1.2 กราฟเปรียบเทียบ (60%) */}
         <div className="lg:col-span-3 bg-slate-50 border border-slate-200 rounded-lg p-4">
-          {/* หัวข้อถูกย้ายไปอยู่ใน options ของกราฟแล้ว */}
           <div className="relative h-[450px]">
-            {" "}
-            {/* ลด mt-4 ออก */}
             <Bar options={comparisonChartOptions} data={comparisonChartData} />
           </div>
         </div>
       </div>
 
-      {/* 2. [แถวที่ 2] กราฟแท่ง (100%) */}
       <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
         <h3 className="font-semibold text-slate-700 text-center">
           จำนวนตู้ฯ แยกตามที่ทำการ{" "}
@@ -548,17 +522,15 @@ const Dashboard = ({
         </div>
       </div>
 
-      {/* 3. [แถวที่ 3] กราฟวงกลม (50% + 50%) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
           <h3 className="font-semibold text-slate-700 text-center">
-            สัดส่วนตู้ฯ แยกตามสังกัด (ทั้งหมด) {/* ชี้แจงว่าไม่ filter */}
+            สัดส่วนตู้ฯ แยกตามสังกัด (ทั้งหมด)
           </h3>
           <div className="relative h-64 mt-4">
             <Pie options={pieChartOptions} data={jurisdictionData} />
           </div>
         </div>
-
         <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
           <h3 className="font-semibold text-slate-700 text-center">
             สัดส่วนตู้ฯ แยกตามประเภท{" "}
@@ -589,17 +561,15 @@ const Toast = ({
     }, 1500);
     return () => clearTimeout(timer);
   }, [onClose]);
-
   return (
     <div className="fixed top-5 right-5 z-[100] bg-white text-slate-800 px-4 py-3 rounded-lg shadow-xl border border-slate-200 flex items-center gap-3 animate-slide-in">
-      <CheckCircle size={20} className="text-green-500" />
+      <CheckCircle size={20} className="text-green-500" />{" "}
       <span>{message}</span>
     </div>
   );
 };
 
 export default function MailboxApp() {
-  // --- States ---
   const [mailboxes, setMailboxes] = useState<Mailbox[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isClient, setIsClient] = useState(false);
@@ -655,8 +625,8 @@ export default function MailboxApp() {
       jurisdiction: "",
       mailboxType: "" as MailboxType,
       landmark: "",
-      lat: "", // เริ่มต้นเป็นค่าว่าง
-      lng: "", // เริ่มต้นเป็นค่าว่าง
+      lat: "",
+      lng: "",
       cleaningHistory: [],
     }),
     []
@@ -688,15 +658,12 @@ export default function MailboxApp() {
 
   const formMapRef = useRef<Map | null>(null);
 
-  // --- Logic ---
   const filteredMailboxes = useMemo(() => {
     let items = [...mailboxes];
-
     if (showOnlyOverdue) {
       items = items.filter((m) => {
         const latestCleaningDate = m.cleaningHistory[0]?.date;
         if (!latestCleaningDate) return true;
-
         const today = new Date();
         const lastCleaned = new Date(latestCleaningDate);
         today.setHours(0, 0, 0, 0);
@@ -706,7 +673,6 @@ export default function MailboxApp() {
         return diffDays > 90;
       });
     }
-
     if (!showOnlyOverdue) {
       if (jurisdictionFilter)
         items = items.filter((m) => m.jurisdiction === jurisdictionFilter);
@@ -732,27 +698,26 @@ export default function MailboxApp() {
     showOnlyOverdue,
   ]);
 
+  useEffect(() => {
+    setSelectedMapMailboxes(filteredMailboxes);
+  }, [filteredMailboxes]);
+
   const sortedMailboxes = useMemo(() => {
     if (!sortColumn) {
       return filteredMailboxes;
     }
-
     const getLatestDate = (m: Mailbox) => m.cleaningHistory[0]?.date;
-
     return [...filteredMailboxes].sort((a, b) => {
       if (sortColumn === "latestCleaningDate") {
         const aDate = getLatestDate(a);
         const bDate = getLatestDate(b);
-
         if (aDate && !bDate) return -1;
         if (!aDate && bDate) return 1;
         if (!aDate && !bDate) return 0;
-
         const comparison =
           (aDate as Date).getTime() - (bDate as Date).getTime();
         return sortDirection === "asc" ? comparison : -comparison;
       }
-
       if (
         sortColumn === "postOffice" ||
         sortColumn === "landmark" ||
@@ -763,7 +728,6 @@ export default function MailboxApp() {
         const comparison = aVal.localeCompare(bVal, "th");
         return sortDirection === "asc" ? comparison : -comparison;
       }
-
       return 0;
     });
   }, [filteredMailboxes, sortColumn, sortDirection]);
@@ -790,7 +754,6 @@ export default function MailboxApp() {
     showOnlyOverdue,
   ]);
 
-  // --- Handlers ---
   const handleSort = (column: SortColumn) => {
     if (!column) return;
     if (sortColumn === column) {
@@ -817,6 +780,7 @@ export default function MailboxApp() {
       }
     });
   };
+
   const handleSelectAllFiltered = (checked: boolean) => {
     if (checked) {
       setSelectedMapMailboxes(filteredMailboxes);
@@ -824,21 +788,21 @@ export default function MailboxApp() {
       setSelectedMapMailboxes([]);
     }
   };
+
   const handleFormInputChange = (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
     let finalValue: string | number = value;
-
     if (name === "lat" || name === "lng") {
       const parsed = parseFloat(value);
       finalValue = isNaN(parsed) ? "" : parsed;
     } else if (name === "postalCode") {
       finalValue = value.replace(/[^0-9]/g, "");
     }
-
     setCurrentFormData((prev) => ({ ...prev, [name]: finalValue }));
   };
+
   const handleImageUpload = async (
     event: ChangeEvent<HTMLInputElement>,
     imageType: "before" | "after"
@@ -880,11 +844,7 @@ export default function MailboxApp() {
           if (onSuccess) {
             onSuccess(lat, lng);
           } else {
-            setCurrentFormData((prev) => ({
-              ...prev,
-              lat: lat,
-              lng: lng,
-            }));
+            setCurrentFormData((prev) => ({ ...prev, lat: lat, lng: lng }));
           }
           setLocationStatus("ดึงพิกัดสำเร็จ!");
         },
@@ -897,31 +857,21 @@ export default function MailboxApp() {
   );
 
   const handleMapPositionChange = useCallback((lat: number, lng: number) => {
-    setCurrentFormData((prev) => ({
-      ...prev,
-      lat: lat,
-      lng: lng,
-    }));
+    setCurrentFormData((prev) => ({ ...prev, lat: lat, lng: lng }));
   }, []);
 
   const openFormModal = (mode: "add" | "edit", mailbox?: Mailbox) => {
     setFormMode(mode);
     setLocationStatus("");
-
     if (mode === "edit" && mailbox) {
       setCurrentFormData(mailbox);
       setIsFormModalOpen(true);
     } else {
       setCurrentFormData(BLANK_MAILBOX_FORM);
       setIsFormModalOpen(true);
-
       setTimeout(() => {
         getCurrentLocation((lat, lng) => {
-          setCurrentFormData((prev) => ({
-            ...prev,
-            lat: lat,
-            lng: lng,
-          }));
+          setCurrentFormData((prev) => ({ ...prev, lat: lat, lng: lng }));
         });
       }, 100);
     }
@@ -948,18 +898,15 @@ export default function MailboxApp() {
       alert("กรุณากรอกข้อมูลให้ครบถ้วน รวมถึงการเลือก/กรอกพิกัด");
       return;
     }
-
     const isEdit = formMode === "edit";
     const mailboxId = (currentFormData as Mailbox).id;
     const url = isEdit ? `/api/mailboxes/${mailboxId}` : "/api/mailboxes";
     const method = isEdit ? "PUT" : "POST";
-
     const response = await fetch(url, {
       method: method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...currentFormData, cleaningHistory: undefined }),
     });
-
     if (response.ok) {
       showToast(
         isEdit ? "แก้ไขข้อมูลเรียบร้อยแล้ว" : "บันทึกข้อมูลเรียบร้อยแล้ว"
@@ -998,7 +945,6 @@ export default function MailboxApp() {
       alert("กรุณากรอกข้อมูลและอัปโหลดรูปภาพให้ครบถ้วน");
       return;
     }
-
     const response = await fetch("/api/cleaning", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1010,7 +956,6 @@ export default function MailboxApp() {
         afterCleanImage: reportAfterImage,
       }),
     });
-
     if (response.ok) {
       showToast("รายงานผลเรียบร้อยแล้ว");
       fetchMailboxes();
@@ -1028,6 +973,7 @@ export default function MailboxApp() {
     setIsImageModalOpen(false);
     setFullImageUrl("");
   };
+
   const getDateHighlightClass = (date?: Date) => {
     if (!date) return "bg-red-100 text-red-700";
     const today = new Date();
@@ -1069,7 +1015,9 @@ export default function MailboxApp() {
       )}
       <main className="flex-grow container mx-auto p-4 md:p-6 lg:p-8 space-y-6">
         <header>
-          <h1 className="text-3xl font-bold text-sky-700">
+          <h1 className="text-4xl font-semibold text-sky-700 tracking-tight">
+            {" "}
+            {/* เปลี่ยนเป็น text-4xl, font-semibold, tracking-tight */}
             ระบบบันทึกข้อมูลตู้ไปรษณีย์
           </h1>
           <p className="text-slate-600 mt-1">
@@ -1077,321 +1025,331 @@ export default function MailboxApp() {
           </p>
         </header>
 
-        {/* --- ส่วน Filter Controls และ ปุ่ม Add --- */}
-        <div className="flex flex-col xl:flex-row justify-between items-center gap-4">
-          {/* ส่วน Filter Controls */}
-          <div className="w-full flex-grow flex flex-col sm:flex-row gap-2">
-            <div className="relative flex-grow">
-              <Search
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                size={18}
-              />
-              <input
-                type="text"
-                placeholder="ค้นหา..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+        {/* [ย้าย] กล่อง "ข้อมูลทั่วไป" ครอบ Filter, ตาราง, แผนที่ */}
+        <div className="bg-white rounded-xl shadow-lg p-4 md:p-6 space-y-4">
+          <h2 className="text-xl font-semibold text-slate-800 flex items-center gap-2">
+            <Info size={20} /> ข้อมูลทั่วไป
+          </h2>
+
+          {/* --- ส่วน Filter Controls และ ปุ่ม Add --- */}
+          <div className="flex flex-col xl:flex-row justify-between items-center gap-4">
+            {/* ส่วน Filter Controls */}
+            <div className="w-full flex-grow flex flex-col sm:flex-row gap-2">
+              <div className="relative flex-grow">
+                <Search
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  size={18}
+                />
+                <input
+                  type="text"
+                  placeholder="ค้นหา..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  disabled={showOnlyOverdue}
+                  className="w-full pl-10 pr-4 py-2 bg-white border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition shadow-sm disabled:bg-slate-50 disabled:cursor-not-allowed"
+                />
+              </div>
+              <select
+                value={jurisdictionFilter}
+                onChange={(e) => setJurisdictionFilter(e.target.value)}
                 disabled={showOnlyOverdue}
-                className="w-full pl-10 pr-4 py-2 bg-white border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition shadow-sm disabled:bg-slate-50 disabled:cursor-not-allowed"
-              />
-            </div>
-            <select
-              value={jurisdictionFilter}
-              onChange={(e) => setJurisdictionFilter(e.target.value)}
-              disabled={showOnlyOverdue}
-              className="w-full sm:w-1/3 xl:w-auto p-2 border border-slate-300 rounded-md bg-white focus:ring-2 focus:ring-sky-500 shadow-sm disabled:bg-slate-50 disabled:cursor-not-allowed"
-            >
-              <option value="">ทุกสังกัด</option>
-              {JURISDICTIONS.map((j) => (
-                <option key={j} value={j}>
-                  {j}
-                </option>
-              ))}
-            </select>
-            <div className="relative w-full sm:w-1/3 xl:w-auto">
-              <input
-                type="text"
-                list="post-offices-list"
-                placeholder="ทุกที่ทำการ"
-                value={postOfficeFilter}
-                onChange={(e) => setPostOfficeFilter(e.target.value)}
-                disabled={showOnlyOverdue}
-                className="w-full p-2 pr-8 border border-slate-300 rounded-md bg-white focus:ring-2 focus:ring-sky-500 shadow-sm disabled:bg-slate-50 disabled:cursor-not-allowed"
-              />
-              <datalist id="post-offices-list">
-                {POST_OFFICES.map((po) => (
-                  <option key={po} value={po} />
+                className="w-full sm:w-1/3 xl:w-auto p-2 border border-slate-300 rounded-md bg-white focus:ring-2 focus:ring-sky-500 shadow-sm disabled:bg-slate-50 disabled:cursor-not-allowed"
+              >
+                <option value="">ทุกสังกัด</option>{" "}
+                {JURISDICTIONS.map((j) => (
+                  <option key={j} value={j}>
+                    {j}
+                  </option>
                 ))}
-              </datalist>
-              {postOfficeFilter && !showOnlyOverdue && (
+              </select>
+              <div className="relative w-full sm:w-1/3 xl:w-auto">
+                <input
+                  type="text"
+                  list="post-offices-list"
+                  placeholder="ทุกที่ทำการ"
+                  value={postOfficeFilter}
+                  onChange={(e) => setPostOfficeFilter(e.target.value)}
+                  disabled={showOnlyOverdue}
+                  className="w-full p-2 pr-8 border border-slate-300 rounded-md bg-white focus:ring-2 focus:ring-sky-500 shadow-sm disabled:bg-slate-50 disabled:cursor-not-allowed"
+                />
+                <datalist id="post-offices-list">
+                  {POST_OFFICES.map((po) => (
+                    <option key={po} value={po} />
+                  ))}
+                </datalist>
+                {postOfficeFilter && !showOnlyOverdue && (
+                  <button
+                    onClick={() => setPostOfficeFilter("")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600"
+                  >
+                    <X size={16} />
+                  </button>
+                )}
+              </div>
+              {showOnlyOverdue && (
                 <button
-                  onClick={() => setPostOfficeFilter("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600"
+                  onClick={() => setShowOnlyOverdue(false)}
+                  className="w-full sm:w-auto flex-shrink-0 flex items-center justify-center gap-2 bg-red-100 text-red-700 font-semibold px-4 py-2 rounded-md hover:bg-red-200 transition-colors shadow-sm"
+                  title="ล้างตัวกรองตู้ที่ไม่ได้ทำความสะอาดเกิน 90 วัน"
                 >
                   <X size={16} />
+                  <span className="hidden sm:inline">ล้างกรอง</span>
                 </button>
               )}
             </div>
-            {/* ปุ่มล้าง Filter (แสดงเมื่อกรองตู้ค้าง) */}
-            {showOnlyOverdue && (
-              <button
-                onClick={() => setShowOnlyOverdue(false)}
-                className="w-full sm:w-auto flex-shrink-0 flex items-center justify-center gap-2 bg-red-100 text-red-700 font-semibold px-4 py-2 rounded-md hover:bg-red-200 transition-colors shadow-sm"
-                title="ล้างตัวกรองตู้ที่ไม่ได้ทำความสะอาดเกิน 90 วัน"
-              >
-                <X size={16} />
-                <span className="hidden sm:inline">ล้างกรอง</span>
-              </button>
-            )}
+            {/* ปุ่ม Add (แสดงตลอด) */}
+            <button
+              onClick={() => openFormModal("add")}
+              className="w-full xl:w-auto flex-shrink-0 flex items-center justify-center gap-2 bg-sky-600 text-white font-semibold px-5 py-2 rounded-md hover:bg-sky-700 transition-all duration-300 shadow-md hover:shadow-lg"
+            >
+              <PlusCircle size={16} />
+              เพิ่มข้อมูล
+            </button>
           </div>
 
-          {/* ปุ่ม Add (แสดงตลอด) */}
-          <button
-            onClick={() => openFormModal("add")}
-            className="w-full xl:w-auto flex-shrink-0 flex items-center justify-center gap-2 bg-sky-600 text-white font-semibold px-5 py-2 rounded-md hover:bg-sky-700 transition-all duration-300 shadow-md hover:shadow-lg"
-          >
-            <PlusCircle size={16} />
-            เพิ่มข้อมูล
-          </button>
-        </div>
-
-        {/* --- ส่วนตารางและแผนที่ --- */}
-        <div className="flex flex-col lg:flex-row gap-6">
-          <div className="lg:w-3/5 w-full flex flex-col">
-            <div className="bg-white rounded-xl shadow-lg overflow-hidden flex-grow flex flex-col">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-slate-100">
-                    <tr>
-                      <th className="px-4 py-3 w-4">
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
-                          onChange={(e) =>
-                            handleSelectAllFiltered(e.target.checked)
-                          }
-                          checked={
-                            filteredMailboxes.length > 0 &&
-                            selectedMapMailboxes.length ===
-                              filteredMailboxes.length
-                          }
-                        />
-                      </th>
-                      <th
-                        className="px-4 py-3 text-left font-semibold text-slate-700 cursor-pointer hover:bg-slate-200 transition-colors"
-                        onClick={() => handleSort("postOffice")}
-                      >
-                        <div className="flex items-center">
-                          ที่ทำการฯ
-                          <SortIcon forColumn="postOffice" />
-                        </div>
-                      </th>
-                      <th
-                        className="px-4 py-3 text-left font-semibold text-slate-700 cursor-pointer hover:bg-slate-200 transition-colors"
-                        onClick={() => handleSort("landmark")}
-                      >
-                        <div className="flex items-center">
-                          จุดสังเกต
-                          <SortIcon forColumn="landmark" />
-                        </div>
-                      </th>
-                      <th
-                        className="px-4 py-3 text-left font-semibold text-slate-700 cursor-pointer hover:bg-slate-200 transition-colors"
-                        onClick={() => handleSort("jurisdiction")}
-                      >
-                        <div className="flex items-center">
-                          สังกัด
-                          <SortIcon forColumn="jurisdiction" />
-                        </div>
-                      </th>
-                      <th
-                        className="px-4 py-3 text-left font-semibold text-slate-700 cursor-pointer hover:bg-slate-200 transition-colors"
-                        onClick={() => handleSort("latestCleaningDate")}
-                      >
-                        <div className="flex items-center">
-                          ทำความสะอาดล่าสุด
-                          <SortIcon forColumn="latestCleaningDate" />
-                        </div>
-                      </th>
-                      <th className="px-4 py-3 text-center font-semibold text-slate-700">
-                        จัดการ
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200">
-                    {paginatedMailboxes.map((mailbox) => {
-                      const latestCleaningDate =
-                        mailbox.cleaningHistory[0]?.date;
-                      return (
-                        <tr
-                          key={mailbox.id}
-                          className="hover:bg-sky-50 transition-colors"
-                        >
-                          <td className="px-4 py-3">
-                            <input
-                              type="checkbox"
-                              className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
-                              checked={selectedMapMailboxes.some(
-                                (item) => item.id === mailbox.id
-                              )}
-                              onChange={(e) =>
-                                handleMapSelectionChange(
-                                  mailbox,
-                                  e.target.checked
-                                )
-                              }
-                            />
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-slate-800 font-medium">
-                            {mailbox.postOffice}
-                          </td>
-                          <td className="px-4 py-3 text-slate-500 min-w-[200px]">
-                            {mailbox.landmark}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-slate-500">
-                            {mailbox.jurisdiction}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-slate-500">
-                            <span
-                              className={`px-2 py-1 rounded-full text-xs font-medium ${getDateHighlightClass(
-                                latestCleaningDate
-                              )}`}
-                            >
-                              {latestCleaningDate
-                                ? formatDateToThai(latestCleaningDate)
-                                : "ยังไม่มีการรายงาน"}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <div className="flex justify-center items-center gap-1">
-                              <button
-                                onClick={() => openDetailModal(mailbox)}
-                                className="p-2 text-slate-500 hover:bg-slate-100 hover:text-sky-600 rounded-full transition-colors"
-                                title="ดูรายละเอียด"
-                              >
-                                <Eye size={16} />
-                              </button>
-                              <button
-                                onClick={() => openFormModal("edit", mailbox)}
-                                className="p-2 text-slate-500 hover:bg-slate-100 hover:text-sky-600 rounded-full transition-colors"
-                                title="แก้ไขข้อมูล"
-                              >
-                                <Pencil size={16} />
-                              </button>
-                              <button
-                                onClick={() => openReportModal(mailbox.id)}
-                                className="p-2 text-slate-500 hover:bg-slate-100 hover:text-sky-600 rounded-full transition-colors"
-                                title="รายงานผลการทำความสะอาด"
-                              >
-                                <Camera size={16} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-              {totalPages > 0 && (
-                <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50 px-4 py-3 mt-auto">
-                  <div>
-                    <p className="text-sm text-slate-500">
-                      แสดง{" "}
-                      <span className="font-semibold text-slate-700">
-                        {(currentPage - 1) * ITEMS_PER_PAGE + 1}
-                      </span>
-                      -{" "}
-                      <span className="font-semibold text-slate-700">
-                        {Math.min(
-                          currentPage * ITEMS_PER_PAGE,
-                          filteredMailboxes.length
-                        )}
-                      </span>{" "}
-                      จาก{" "}
-                      <span className="font-semibold text-slate-700">
-                        {filteredMailboxes.length}
-                      </span>
-                    </p>
-                  </div>
-                  {totalPages > 1 && (
-                    <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm">
-                      <button
-                        onClick={() =>
-                          setCurrentPage((p) => Math.max(1, p - 1))
-                        }
-                        disabled={currentPage === 1}
-                        className="relative inline-flex items-center rounded-l-md px-2 py-2 text-slate-400 hover:bg-slate-100 disabled:opacity-50"
-                      >
-                        <ChevronLeft className="h-5 w-5" />
-                      </button>
-                      {Array.from(
-                        {
-                          length: Math.min(totalPages, 5),
-                        },
-                        (_, i) => {
-                          let page;
-                          if (totalPages <= 5) {
-                            page = i + 1;
-                          } else {
-                            if (currentPage <= 3) {
-                              page = i + 1;
-                            } else if (currentPage >= totalPages - 2) {
-                              page = totalPages - 4 + i;
-                            } else {
-                              page = currentPage - 2 + i;
+          {/* --- ส่วนตารางและแผนที่ --- */}
+          <div className="flex flex-col lg:flex-row gap-6 pt-4">
+            {" "}
+            {/* เพิ่ม pt-4 เพื่อเว้นระยะห่าง */}
+            {/* ตาราง (เหมือนเดิม) */}
+            <div className="lg:w-3/5 w-full flex flex-col">
+              {/* เพิ่ม bg-white, shadow etc. ถ้าต้องการให้ตารางมีกล่องของตัวเอง */}
+              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden flex-grow flex flex-col">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-100">
+                      <tr>
+                        <th className="px-4 py-3 w-4">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+                            checked={
+                              filteredMailboxes.length > 0 &&
+                              selectedMapMailboxes.length ===
+                                filteredMailboxes.length
                             }
-                          }
-                          return (
-                            <button
-                              key={page}
-                              onClick={() => setCurrentPage(page)}
-                              className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
-                                currentPage === page
-                                  ? "z-10 bg-sky-100 border-sky-500 text-sky-600"
-                                  : "text-slate-700 hover:bg-slate-100"
-                              }`}
-                            >
-                              {page}
-                            </button>
-                          );
-                        }
-                      )}
-                      <button
-                        onClick={() =>
-                          setCurrentPage((p) => Math.min(totalPages, p + 1))
-                        }
-                        disabled={currentPage === totalPages}
-                        className="relative inline-flex items-center rounded-r-md px-2 py-2 text-slate-400 hover:bg-slate-100 disabled:opacity-50"
-                      >
-                        <ChevronRight className="h-5 w-5" />
-                      </button>
-                    </nav>
-                  )}
+                            onChange={(e) =>
+                              handleSelectAllFiltered(e.target.checked)
+                            }
+                          />
+                        </th>
+                        <th
+                          className="px-4 py-3 text-left font-semibold text-slate-700 cursor-pointer hover:bg-slate-200 transition-colors"
+                          onClick={() => handleSort("postOffice")}
+                        >
+                          <div className="flex items-center">
+                            ที่ทำการฯ
+                            <SortIcon forColumn="postOffice" />
+                          </div>
+                        </th>
+                        <th
+                          className="px-4 py-3 text-left font-semibold text-slate-700 cursor-pointer hover:bg-slate-200 transition-colors"
+                          onClick={() => handleSort("landmark")}
+                        >
+                          <div className="flex items-center">
+                            จุดสังเกต
+                            <SortIcon forColumn="landmark" />
+                          </div>
+                        </th>
+                        <th
+                          className="px-4 py-3 text-left font-semibold text-slate-700 cursor-pointer hover:bg-slate-200 transition-colors"
+                          onClick={() => handleSort("jurisdiction")}
+                        >
+                          <div className="flex items-center">
+                            สังกัด
+                            <SortIcon forColumn="jurisdiction" />
+                          </div>
+                        </th>
+                        <th
+                          className="px-4 py-3 text-left font-semibold text-slate-700 cursor-pointer hover:bg-slate-200 transition-colors"
+                          onClick={() => handleSort("latestCleaningDate")}
+                        >
+                          <div className="flex items-center">
+                            ทำความสะอาดล่าสุด
+                            <SortIcon forColumn="latestCleaningDate" />
+                          </div>
+                        </th>
+                        <th className="px-4 py-3 text-center font-semibold text-slate-700">
+                          จัดการ
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200">
+                      {paginatedMailboxes.map((mailbox) => {
+                        const latestCleaningDate =
+                          mailbox.cleaningHistory[0]?.date;
+                        return (
+                          <tr
+                            key={mailbox.id}
+                            className="hover:bg-sky-50 transition-colors"
+                          >
+                            <td className="px-4 py-3">
+                              <input
+                                type="checkbox"
+                                className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+                                checked={selectedMapMailboxes.some(
+                                  (item) => item.id === mailbox.id
+                                )}
+                                onChange={(e) =>
+                                  handleMapSelectionChange(
+                                    mailbox,
+                                    e.target.checked
+                                  )
+                                }
+                              />
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-slate-800 font-medium">
+                              {mailbox.postOffice}
+                            </td>
+                            <td className="px-4 py-3 text-slate-500 min-w-[200px]">
+                              {mailbox.landmark}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-slate-500">
+                              {mailbox.jurisdiction}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-slate-500">
+                              <span
+                                className={`px-2 py-1 rounded-full text-xs font-medium ${getDateHighlightClass(
+                                  latestCleaningDate
+                                )}`}
+                              >
+                                {latestCleaningDate
+                                  ? formatDateToThai(latestCleaningDate)
+                                  : "ยังไม่มีการรายงาน"}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              <div className="flex justify-center items-center gap-1">
+                                <button
+                                  onClick={() => openDetailModal(mailbox)}
+                                  className="p-2 text-slate-500 hover:bg-slate-100 hover:text-sky-600 rounded-full transition-colors"
+                                  title="ดูรายละเอียด"
+                                >
+                                  <Eye size={16} />
+                                </button>
+                                <button
+                                  onClick={() => openFormModal("edit", mailbox)}
+                                  className="p-2 text-slate-500 hover:bg-slate-100 hover:text-sky-600 rounded-full transition-colors"
+                                  title="แก้ไขข้อมูล"
+                                >
+                                  <Pencil size={16} />
+                                </button>
+                                <button
+                                  onClick={() => openReportModal(mailbox.id)}
+                                  className="p-2 text-slate-500 hover:bg-slate-100 hover:text-sky-600 rounded-full transition-colors"
+                                  title="รายงานผลการทำความสะอาด"
+                                >
+                                  <Camera size={16} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
-              )}
-              {filteredMailboxes.length === 0 && (
-                <p className="text-center text-slate-500 p-12">ไม่พบข้อมูล</p>
-              )}
+                {totalPages > 0 && (
+                  <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50 px-4 py-3 mt-auto">
+                    <div>
+                      <p className="text-sm text-slate-500">
+                        แสดง{" "}
+                        <span className="font-semibold text-slate-700">
+                          {(currentPage - 1) * ITEMS_PER_PAGE + 1}
+                        </span>
+                        -
+                        <span className="font-semibold text-slate-700">
+                          {Math.min(
+                            currentPage * ITEMS_PER_PAGE,
+                            filteredMailboxes.length
+                          )}
+                        </span>{" "}
+                        จาก{" "}
+                        <span className="font-semibold text-slate-700">
+                          {filteredMailboxes.length}
+                        </span>
+                      </p>
+                    </div>
+                    {totalPages > 1 && (
+                      <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm">
+                        <button
+                          onClick={() =>
+                            setCurrentPage((p) => Math.max(1, p - 1))
+                          }
+                          disabled={currentPage === 1}
+                          className="relative inline-flex items-center rounded-l-md px-2 py-2 text-slate-400 hover:bg-slate-100 disabled:opacity-50"
+                        >
+                          <ChevronLeft className="h-5 w-5" />
+                        </button>
+                        {Array.from(
+                          { length: Math.min(totalPages, 5) },
+                          (_, i) => {
+                            let page;
+                            if (totalPages <= 5) {
+                              page = i + 1;
+                            } else {
+                              if (currentPage <= 3) {
+                                page = i + 1;
+                              } else if (currentPage >= totalPages - 2) {
+                                page = totalPages - 4 + i;
+                              } else {
+                                page = currentPage - 2 + i;
+                              }
+                            }
+                            return (
+                              <button
+                                key={page}
+                                onClick={() => setCurrentPage(page)}
+                                className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
+                                  currentPage === page
+                                    ? "z-10 bg-sky-100 border-sky-500 text-sky-600"
+                                    : "text-slate-700 hover:bg-slate-100"
+                                }`}
+                              >
+                                {page}
+                              </button>
+                            );
+                          }
+                        )}
+                        <button
+                          onClick={() =>
+                            setCurrentPage((p) => Math.min(totalPages, p + 1))
+                          }
+                          disabled={currentPage === totalPages}
+                          className="relative inline-flex items-center rounded-r-md px-2 py-2 text-slate-400 hover:bg-slate-100 disabled:opacity-50"
+                        >
+                          <ChevronRight className="h-5 w-5" />
+                        </button>
+                      </nav>
+                    )}
+                  </div>
+                )}
+                {filteredMailboxes.length === 0 && (
+                  <p className="text-center text-slate-500 p-12">ไม่พบข้อมูล</p>
+                )}
+              </div>
             </div>
-          </div>
-          <div
-            className={`lg:w-2/5 w-full relative transition-all duration-300 ${
-              isFormModalOpen || isDetailModalOpen || isReportModalOpen
-                ? "z-0"
-                : "z-10"
-            }`}
-          >
-            <div className="bg-white rounded-xl shadow-lg overflow-hidden p-4 space-y-4 h-full">
-              <h2 className="text-lg font-semibold text-slate-900">
-                แผนที่แสดงผล ({selectedMapMailboxes.length} รายการ)
-              </h2>
-              <div className="w-full h-full min-h-[500px] rounded-lg overflow-hidden shadow-inner bg-slate-100">
-                <MailboxMap mailboxes={selectedMapMailboxes} />
+            {/* แผนที่ (เหมือนเดิม) */}
+            <div
+              className={`lg:w-2/5 w-full relative transition-all duration-300 ${
+                isFormModalOpen || isDetailModalOpen || isReportModalOpen
+                  ? "z-0"
+                  : "z-10"
+              }`}
+            >
+              {/* เพิ่ม bg-white, shadow etc. ถ้าต้องการให้แผนที่มีกล่องของตัวเอง */}
+              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden p-4 space-y-4 h-full">
+                <h2 className="text-lg font-semibold text-slate-900">
+                  แผนที่แสดงผล ({selectedMapMailboxes.length} รายการ)
+                </h2>
+                <div className="w-full h-full min-h-[500px] rounded-lg overflow-hidden shadow-inner bg-slate-100">
+                  <MailboxMap mailboxes={selectedMapMailboxes} />
+                </div>
               </div>
             </div>
           </div>
         </div>
+        {/* จบกล่อง "ข้อมูลทั่วไป" */}
 
         {/* --- ส่วน Dashboard --- */}
         <Dashboard
@@ -1402,7 +1360,6 @@ export default function MailboxApp() {
         />
       </main>
 
-      {/* --- ส่วน Footer --- */}
       <footer className="mt-auto">
         <div className="container mx-auto px-4 sm:px-6 py-6 flex justify-between items-center text-sm text-slate-500 border-t border-slate-200">
           <p className="flex items-center justify-center gap-1.5">
@@ -1420,7 +1377,7 @@ export default function MailboxApp() {
         </div>
       </footer>
 
-      {/* --- ส่วน Modal Forms --- */}
+      {/* --- Modals (Collapsed JSX) --- */}
       {isFormModalOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col transform transition-all animate-scale-in">
@@ -1488,7 +1445,7 @@ export default function MailboxApp() {
                   className="w-full p-2 border border-slate-300 rounded-md shadow-sm"
                   required
                 >
-                  <option value="">-- เลือก --</option>
+                  <option value="">-- เลือก --</option>{" "}
                   {JURISDICTIONS.map((j) => (
                     <option key={j} value={j}>
                       {j}
@@ -1507,7 +1464,7 @@ export default function MailboxApp() {
                   className="w-full p-2 border border-slate-300 rounded-md shadow-sm"
                   required
                 >
-                  <option value="">-- เลือก --</option>
+                  <option value="">-- เลือก --</option>{" "}
                   {MAILBOX_TYPES.map((type) => (
                     <option key={type} value={type}>
                       {type}
@@ -1528,8 +1485,6 @@ export default function MailboxApp() {
                   required
                 ></textarea>
               </div>
-
-              {/* --- ส่วนของพิกัด --- */}
               <div>
                 <div className="flex justify-between items-center mb-2">
                   <label className="block text-sm font-medium text-slate-700">
@@ -1580,8 +1535,6 @@ export default function MailboxApp() {
                   </p>
                 )}
               </div>
-              {/* --- จบส่วนพิกัด --- */}
-
               <div className="flex justify-end gap-3 p-4 bg-slate-50 -m-6 mt-6 rounded-b-xl border-t border-slate-200">
                 <button
                   type="button"
@@ -1922,6 +1875,7 @@ export default function MailboxApp() {
         </div>
       )}
 
+      {/* --- Styles --- */}
       <style
         dangerouslySetInnerHTML={{
           __html: `@keyframes scale-in { from { transform: scale(0.98); opacity: 0; } to { transform: scale(1); opacity: 1; } } @keyframes slide-in { from { transform: translateY(-20px) translateX(50%); opacity: 0; } to { transform: translateY(0) translateX(50%); opacity: 1; } } .animate-scale-in { animation: scale-in 0.2s ease-out forwards; } .animate-slide-in { animation: slide-in 0.3s ease-out forwards; right: 50%; }`,
