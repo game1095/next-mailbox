@@ -102,7 +102,7 @@ const FormMapPicker: React.FC<FormMapPickerProps> = ({
   initialLat,
   initialLng,
   onPositionChange,
-  mapRef,
+  mapRef, // รับ ref มาจาก props
 }) => {
   const getInitialPosition = useCallback((): LatLngTuple => {
     const lat =
@@ -136,6 +136,7 @@ const FormMapPicker: React.FC<FormMapPickerProps> = ({
         : SELECTED_ZOOM;
     setCurrentZoom(newZoom);
 
+    // ใช้ flyTo จาก ref ที่ได้รับมาโดยตรง
     if (mapRef?.current) {
       mapRef.current.flyTo(pos, newZoom);
     }
@@ -147,14 +148,8 @@ const FormMapPicker: React.FC<FormMapPickerProps> = ({
       zoom={currentZoom}
       scrollWheelZoom={true}
       style={{ height: "300px", width: "100%", borderRadius: "8px" }}
-      // [แก้ไข] เปลี่ยน whenCreated เป็น whenReady
-      whenReady={(mapInstance) => {
-        // mapInstance will be type `Map` here
-        if (mapRef) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          mapRef.current = mapInstance as any; // Cast to any to assign to ref
-        }
-      }}
+      // [แก้ไข] ใช้ ref prop แทน whenReady
+      ref={mapRef}
     >
       <TileLayer
         attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
