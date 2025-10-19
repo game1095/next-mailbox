@@ -26,7 +26,9 @@ import {
   ChevronDown,
   AlertTriangle,
   LocateFixed,
-  Info, // เพิ่มไอคอน Info
+  Info,
+  Sun,
+  Moon,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { Bar, Pie } from "react-chartjs-2";
@@ -58,6 +60,7 @@ ChartJS.register(
 
 type MailboxType = "ก." | "ข." | "ค." | "ง." | "";
 
+// ... (interfaces Mailbox, CleaningRecord, etc. ... same as before) ...
 interface CleaningRecord {
   date: Date;
   cleanerName: string;
@@ -239,8 +242,8 @@ const formatDateToThai = (date: Date) => {
 const MailboxMap = dynamic(() => import("@/components/MailboxMap"), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-full flex justify-center items-center bg-slate-100">
-      <p className="text-slate-500">กำลังโหลดแผนที่...</p>
+    <div className="w-full h-full flex justify-center items-center bg-gray-700">
+      <p className="text-gray-300">กำลังโหลดแผนที่...</p>
     </div>
   ),
 });
@@ -249,19 +252,21 @@ const MailboxMap = dynamic(() => import("@/components/MailboxMap"), {
 const FormMapPicker = dynamic(() => import("@/components/FormMapPicker"), {
   ssr: false,
   loading: () => (
-    <div className="h-[300px] w-full bg-slate-200 animate-pulse rounded-md flex items-center justify-center">
-      <p className="text-slate-500">กำลังโหลดแผนที่...</p>
+    <div className="h-[300px] w-full bg-gray-700 animate-pulse rounded-md flex items-center justify-center">
+      <p className="text-gray-300">กำลังโหลดแผนที่...</p>
     </div>
   ),
 });
 
 // --- Dashboard Component ---
 const Dashboard = ({
+  theme,
   mailboxes,
   jurisdictions,
   onShowOverdueClick,
   onReportClick,
 }: {
+  theme: "dark" | "light";
   mailboxes: Mailbox[];
   jurisdictions: string[];
   onShowOverdueClick: () => void;
@@ -269,6 +274,19 @@ const Dashboard = ({
 }) => {
   const [dashboardJurisdictionFilter, setDashboardJurisdictionFilter] =
     useState<string>("");
+
+  const chartTextColor = theme === "dark" ? "#d1d5db" : "#475569";
+  const chartGridColor = theme === "dark" ? "#374151" : "#e2e8f0";
+  const accentColor =
+    theme === "dark"
+      ? {
+          bg: "rgba(220, 38, 38, 0.7)", // red-600
+          border: "rgba(185, 28, 28, 1)", // red-700
+        }
+      : {
+          bg: "rgba(59, 130, 246, 0.7)", // blue-500
+          border: "rgba(37, 99, 235, 1)", // blue-700
+        };
 
   const filteredMailboxesForDashboard = useMemo(() => {
     return dashboardJurisdictionFilter
@@ -281,14 +299,31 @@ const Dashboard = ({
     maintainAspectRatio: false,
     plugins: { legend: { display: false } },
     scales: {
-      y: { beginAtZero: true, ticks: { precision: 0 } },
-      x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 } },
+      y: {
+        beginAtZero: true,
+        ticks: { precision: 0, color: chartTextColor },
+        grid: { color: chartGridColor },
+      },
+      x: {
+        ticks: {
+          autoSkip: false,
+          maxRotation: 45,
+          minRotation: 45,
+          color: chartTextColor,
+        },
+        grid: { color: chartGridColor },
+      },
     },
   };
   const pieChartOptions: ChartOptions<"pie"> = {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { legend: { position: "top" as const } },
+    plugins: {
+      legend: {
+        position: "top" as const,
+        labels: { color: chartTextColor },
+      },
+    },
   };
 
   const postOfficeData: ChartData<"bar"> = useMemo(() => {
@@ -305,13 +340,13 @@ const Dashboard = ({
         {
           label: "จำนวนตู้",
           data: Object.values(counts),
-          backgroundColor: "rgba(56, 189, 248, 0.6)",
-          borderColor: "rgba(14, 165, 233, 1)",
+          backgroundColor: accentColor.bg,
+          borderColor: accentColor.border,
           borderWidth: 1,
         },
       ],
     };
-  }, [filteredMailboxesForDashboard]);
+  }, [filteredMailboxesForDashboard, accentColor]);
 
   const jurisdictionData: ChartData<"pie"> = useMemo(() => {
     const counts = mailboxes.reduce((acc, { jurisdiction }) => {
@@ -334,12 +369,12 @@ const Dashboard = ({
             "rgba(14, 165, 233, 0.7)",
             "rgba(99, 102, 241, 0.7)",
           ],
-          borderColor: "#ffffff",
+          borderColor: theme === "dark" ? "#1f2937" : "#ffffff",
           borderWidth: 2,
         },
       ],
     };
-  }, [mailboxes]);
+  }, [mailboxes, theme]);
 
   const mailboxTypeData: ChartData<"pie"> = useMemo(() => {
     const counts = filteredMailboxesForDashboard.reduce(
@@ -363,12 +398,12 @@ const Dashboard = ({
             "rgba(245, 158, 11, 0.7)",
             "rgba(139, 92, 246, 0.7)",
           ],
-          borderColor: "#ffffff",
+          borderColor: theme === "dark" ? "#1f2937" : "#ffffff",
           borderWidth: 2,
         },
       ],
     };
-  }, [filteredMailboxesForDashboard]);
+  }, [filteredMailboxesForDashboard, theme]);
 
   const overdueMailboxes = useMemo(() => {
     return filteredMailboxesForDashboard.filter((m) => {
@@ -395,8 +430,8 @@ const Dashboard = ({
           label: "จำนวนตู้",
           data: [clean, overdue],
           backgroundColor: [
-            "rgba(16, 185, 129, 0.7)",
-            "rgba(239, 68, 68, 0.7)",
+            "rgba(16, 185, 129, 0.7)", // emerald-500
+            "rgba(239, 68, 68, 0.7)", // red-500
           ],
           borderColor: ["rgba(16, 185, 129, 1)", "rgba(239, 68, 68, 1)"],
           borderWidth: 1,
@@ -419,21 +454,48 @@ const Dashboard = ({
             : "ทั้งหมด"
         } (${filteredMailboxesForDashboard.length} ตู้)`,
         font: { size: 14 },
+        color: chartTextColor,
       },
     },
-    scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
+    scales: {
+      x: {
+        beginAtZero: true,
+        ticks: { precision: 0, color: chartTextColor },
+        grid: { color: chartGridColor },
+      },
+      y: {
+        ticks: { color: chartTextColor },
+        grid: { color: chartGridColor },
+      },
+    },
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-4 space-y-6">
+    <div
+      className={`${
+        theme === "dark" ? "bg-gray-800" : "bg-white shadow-lg"
+      } rounded-xl shadow-xl p-4 space-y-6`}
+    >
       <div className="flex justify-between items-center">
-        <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-          <BarChart2 size={18} /> Dashboard
+        <h2
+          className={`${
+            theme === "dark" ? "text-gray-100" : "text-slate-900"
+          } text-lg font-semibold flex items-center gap-2`}
+        >
+          <BarChart2
+            size={18}
+            className={theme === "dark" ? "text-red-500" : "text-blue-600"}
+          />{" "}
+          Dashboard
         </h2>
         <select
           value={dashboardJurisdictionFilter}
           onChange={(e) => setDashboardJurisdictionFilter(e.target.value)}
-          className="p-2 border border-slate-300 rounded-md bg-white text-sm focus:ring-2 focus:ring-sky-500 shadow-sm"
+          className={`p-2 border rounded-md text-sm shadow-sm ${
+            theme === "dark"
+              ? "border-gray-700 bg-gray-700 text-gray-100 focus:ring-red-600"
+              : "border-slate-300 bg-white text-slate-900 focus:ring-blue-500"
+          }`}
         >
           <option value="">กรองตามสังกัด (ทั้งหมด)</option>
           {jurisdictions.map((j) => (
@@ -445,56 +507,96 @@ const Dashboard = ({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        <div className="lg:col-span-2 bg-red-50 border-l-4 border-red-500 p-4 rounded-lg shadow-sm flex flex-col">
+        <div
+          className={`${
+            theme === "dark" ? "bg-gray-800" : "bg-white"
+          } lg:col-span-2 border-l-4 border-red-500 p-4 rounded-lg shadow-sm flex flex-col`}
+        >
           <div
             onClick={onShowOverdueClick}
             className="flex items-center gap-3 cursor-pointer"
             title="คลิกเพื่อกรองในตารางด้านบน"
           >
-            <AlertTriangle size={20} className="text-red-600" />
-            <h3 className="text-base font-semibold text-red-800">
+            <AlertTriangle size={20} className="text-red-500" />
+            <h3
+              className={`text-base font-semibold ${
+                theme === "dark" ? "text-red-400" : "text-red-600"
+              }`}
+            >
               ตู้ที่ไม่ได้ทำความสะอาดเกิน 90 วัน
             </h3>
           </div>
-          <p className="text-4xl font-bold text-red-600 mt-2">
+          <p className="text-4xl font-bold text-red-500 mt-2">
             {overdueMailboxes.length} ตู้
           </p>
           <p
             onClick={onShowOverdueClick}
-            className="text-xs text-red-500 mt-1 cursor-pointer hover:underline"
+            className={`text-xs mt-1 cursor-pointer hover:underline ${
+              theme === "dark" ? "text-red-400" : "text-red-500"
+            }`}
           >
             คลิกเพื่อกรองในตาราง
           </p>
-          <div className="mt-4 pt-4 border-t border-red-200 space-y-3 max-h-[350px] overflow-y-auto pr-2 flex-grow">
-            <h4 className="text-sm font-semibold text-slate-700">
+          <div
+            className={`mt-4 pt-4 space-y-3 max-h-[350px] overflow-y-auto pr-2 flex-grow ${
+              theme === "dark"
+                ? "border-t border-gray-700"
+                : "border-t border-slate-200"
+            }`}
+          >
+            <h4
+              className={`text-sm font-semibold ${
+                theme === "dark" ? "text-gray-200" : "text-slate-700"
+              }`}
+            >
               รายชื่อตู้ที่ค้างดำเนินการ:
             </h4>
             {overdueMailboxes.length > 0 ? (
               overdueMailboxes.map((mailbox) => (
                 <div
                   key={mailbox.id}
-                  className="bg-white p-3 rounded-md border border-red-200 shadow-sm"
+                  className={`p-3 rounded-md border shadow-sm ${
+                    theme === "dark"
+                      ? "bg-gray-700 border-gray-600"
+                      : "bg-white border-slate-200"
+                  }`}
                 >
                   <div className="flex justify-between items-center mb-1.5">
-                    <p className="font-semibold text-sm text-slate-700 pr-2 break-words">
+                    <p
+                      className={`font-semibold text-sm pr-2 break-words ${
+                        theme === "dark" ? "text-gray-200" : "text-slate-800"
+                      }`}
+                    >
                       {mailbox.postOffice}
                     </p>
                     <button
                       onClick={() => onReportClick(mailbox.id)}
-                      className="flex-shrink-0 flex items-center gap-1.5 text-xs bg-sky-600 text-white font-semibold px-3 py-1.5 rounded-md hover:bg-sky-700 transition-colors shadow-sm"
+                      className={`flex-shrink-0 flex items-center gap-1.5 text-xs text-white font-semibold px-3 py-1.5 rounded-md shadow-sm transition-colors ${
+                        theme === "dark"
+                          ? "bg-red-600 hover:bg-red-700"
+                          : "bg-blue-600 hover:bg-blue-700"
+                      }`}
                       title="รายงานผลการทำความสะอาด"
                     >
                       <Camera size={14} />{" "}
                       <span className="hidden sm:inline">รายงาน</span>
                     </button>
                   </div>
-                  <p className="text-xs text-slate-500 break-words">
+                  <p
+                    className={`text-xs break-words ${
+                      theme === "dark" ? "text-gray-300" : "text-slate-500"
+                    }`}
+                  >
                     {mailbox.landmark}
                   </p>
                 </div>
               ))
             ) : (
-              <p className="text-sm text-slate-600">
+              <p
+                className={`text-sm ${
+                  theme === "dark" ? "text-gray-300" : "text-slate-600"
+                }`}
+              >
                 ไม่มีตู้ที่ค้างทำความสะอาด{" "}
                 {dashboardJurisdictionFilter
                   ? `ใน ${dashboardJurisdictionFilter}`
@@ -503,15 +605,31 @@ const Dashboard = ({
             )}
           </div>
         </div>
-        <div className="lg:col-span-3 bg-slate-50 border border-slate-200 rounded-lg p-4">
+        <div
+          className={`lg:col-span-3 border rounded-lg p-4 shadow-sm ${
+            theme === "dark"
+              ? "bg-gray-800 border-gray-700"
+              : "bg-white border-slate-200"
+          }`}
+        >
           <div className="relative h-[450px]">
             <Bar options={comparisonChartOptions} data={comparisonChartData} />
           </div>
         </div>
       </div>
 
-      <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
-        <h3 className="font-semibold text-slate-700 text-center">
+      <div
+        className={`border rounded-lg p-4 shadow-sm ${
+          theme === "dark"
+            ? "bg-gray-800 border-gray-700"
+            : "bg-white border-slate-200"
+        }`}
+      >
+        <h3
+          className={`font-semibold text-center ${
+            theme === "dark" ? "text-gray-200" : "text-slate-700"
+          }`}
+        >
           จำนวนตู้ฯ แยกตามที่ทำการ{" "}
           {dashboardJurisdictionFilter
             ? `ใน ${dashboardJurisdictionFilter}`
@@ -523,16 +641,36 @@ const Dashboard = ({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
-          <h3 className="font-semibold text-slate-700 text-center">
+        <div
+          className={`border rounded-lg p-4 shadow-sm ${
+            theme === "dark"
+              ? "bg-gray-800 border-gray-700"
+              : "bg-white border-slate-200"
+          }`}
+        >
+          <h3
+            className={`font-semibold text-center ${
+              theme === "dark" ? "text-gray-200" : "text-slate-700"
+            }`}
+          >
             สัดส่วนตู้ฯ แยกตามสังกัด (ทั้งหมด)
           </h3>
           <div className="relative h-64 mt-4">
             <Pie options={pieChartOptions} data={jurisdictionData} />
           </div>
         </div>
-        <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
-          <h3 className="font-semibold text-slate-700 text-center">
+        <div
+          className={`border rounded-lg p-4 shadow-sm ${
+            theme === "dark"
+              ? "bg-gray-800 border-gray-700"
+              : "bg-white border-slate-200"
+          }`}
+        >
+          <h3
+            className={`font-semibold text-center ${
+              theme === "dark" ? "text-gray-200" : "text-slate-700"
+            }`}
+          >
             สัดส่วนตู้ฯ แยกตามประเภท{" "}
             {dashboardJurisdictionFilter
               ? `ใน ${dashboardJurisdictionFilter}`
@@ -551,9 +689,11 @@ const Dashboard = ({
 const Toast = ({
   message,
   onClose,
+  theme,
 }: {
   message: string;
   onClose: () => void;
+  theme: "dark" | "light";
 }) => {
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -562,7 +702,13 @@ const Toast = ({
     return () => clearTimeout(timer);
   }, [onClose]);
   return (
-    <div className="fixed top-5 right-5 z-[100] bg-white text-slate-800 px-4 py-3 rounded-lg shadow-xl border border-slate-200 flex items-center gap-3 animate-slide-in">
+    <div
+      className={`fixed top-5 right-5 z-[100] px-4 py-3 rounded-lg shadow-xl border flex items-center gap-3 animate-slide-in ${
+        theme === "dark"
+          ? "bg-gray-700 text-gray-100 border-gray-600"
+          : "bg-white text-slate-800 border-slate-200"
+      }`}
+    >
       <CheckCircle size={20} className="text-green-500" />{" "}
       <span>{message}</span>
     </div>
@@ -570,9 +716,11 @@ const Toast = ({
 };
 
 export default function MailboxApp() {
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [mailboxes, setMailboxes] = useState<Mailbox[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isClient, setIsClient] = useState(false);
+  // ... (other states ... same as before) ...
   const [selectedMapMailboxes, setSelectedMapMailboxes] = useState<Mailbox[]>(
     []
   );
@@ -658,6 +806,7 @@ export default function MailboxApp() {
 
   const formMapRef = useRef<Map | null>(null);
 
+  // ... (all handler functions: filteredMailboxes, sortedMailboxes, paginatedMailboxes, handleSort, etc. ... same as before) ...
   const filteredMailboxes = useMemo(() => {
     let items = [...mailboxes];
     if (showOnlyOverdue) {
@@ -974,16 +1123,28 @@ export default function MailboxApp() {
     setFullImageUrl("");
   };
 
-  const getDateHighlightClass = (date?: Date) => {
-    if (!date) return "bg-red-100 text-red-700";
+  // --- 💡💡💡 FIX HERE: Added theme parameter and logic 💡💡💡 ---
+  const getDateHighlightClass = (
+    date?: Date,
+    currentTheme?: "dark" | "light"
+  ) => {
+    const isDark = currentTheme === "dark";
+    if (!date) {
+      return isDark ? "bg-red-900/50 text-red-300" : "bg-red-100 text-red-700";
+    }
     const today = new Date();
     const lastCleaned = new Date(date);
     today.setHours(0, 0, 0, 0);
     lastCleaned.setHours(0, 0, 0, 0);
     const diffTime = today.getTime() - lastCleaned.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    if (diffDays > 90) return "bg-red-100 text-red-700";
-    else return "bg-green-100 text-green-700";
+    if (diffDays > 90) {
+      return isDark ? "bg-red-900/50 text-red-300" : "bg-red-100 text-red-700";
+    } else {
+      return isDark
+        ? "bg-green-900/50 text-green-300"
+        : "bg-green-100 text-green-700";
+    }
   };
 
   const SortIcon = ({ forColumn }: { forColumn: SortColumn }) => {
@@ -999,45 +1160,95 @@ export default function MailboxApp() {
 
   if (isLoading || !isClient) {
     return (
-      <div className="w-screen h-screen bg-slate-100 flex items-center justify-center">
-        <p className="text-slate-500 animate-pulse">กำลังโหลด...</p>
+      <div
+        className={`w-screen h-screen flex items-center justify-center ${
+          theme === "dark" ? "bg-gray-900" : "bg-slate-100"
+        }`}
+      >
+        <p
+          className={`animate-pulse ${
+            theme === "dark" ? "text-gray-300" : "text-slate-500"
+          }`}
+        >
+          กำลังโหลด...
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="bg-slate-100 text-slate-900 min-h-screen flex flex-col">
+    <div
+      className={`${
+        theme === "dark"
+          ? "bg-gray-900 text-gray-200"
+          : "bg-slate-100 text-slate-800"
+      } min-h-screen flex flex-col`}
+    >
       {toast.show && (
         <Toast
+          theme={theme}
           message={toast.message}
           onClose={() => setToast({ show: false, message: "" })}
         />
       )}
       <main className="flex-grow container mx-auto p-4 md:p-6 lg:p-8 space-y-6">
-        <header>
-          <h1 className="text-4xl font-semibold text-sky-700 tracking-tight">
-            {" "}
-            {/* เปลี่ยนเป็น text-4xl, font-semibold, tracking-tight */}
-            ระบบบันทึกข้อมูลตู้ไปรษณีย์
-          </h1>
-          <p className="text-slate-600 mt-1">
-            Mailbox Information Management System
-          </p>
+        <header className="flex justify-between items-center">
+          <div>
+            <h1
+              className={`text-4xl font-semibold tracking-tight ${
+                theme === "dark" ? "text-red-600" : "text-blue-600"
+              }`}
+            >
+              ระบบบันทึกข้อมูลตู้ไปรษณีย์
+            </h1>
+            <p
+              className={`${
+                theme === "dark" ? "text-gray-300" : "text-slate-600"
+              } mt-1`}
+            >
+              สำนักงานไปรษณีย์เขต 6
+            </p>
+          </div>
+          {/* --- 💡💡💡 FIX HERE: Increased padding and icon size 💡💡💡 --- */}
+          <button
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className={`p-3 rounded-full transition-colors ${
+              // Changed p-2 to p-3
+              theme === "dark"
+                ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                : "bg-slate-200 text-slate-700 hover:bg-slate-300"
+            }`}
+            title={
+              theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"
+            }
+          >
+            {theme === "dark" ? <Sun size={24} /> : <Moon size={24} />}{" "}
+            {/* Changed size 20 to 24 */}
+          </button>
         </header>
 
-        {/* [ย้าย] กล่อง "ข้อมูลทั่วไป" ครอบ Filter, ตาราง, แผนที่ */}
-        <div className="bg-white rounded-xl shadow-lg p-4 md:p-6 space-y-4">
-          <h2 className="text-xl font-semibold text-slate-800 flex items-center gap-2">
-            <Info size={20} /> ข้อมูลทั่วไป
+        <div
+          className={`${
+            theme === "dark" ? "bg-gray-800 shadow-xl" : "bg-white shadow-lg"
+          } rounded-xl p-4 md:p-6 space-y-4`}
+        >
+          <h2
+            className={`${
+              theme === "dark" ? "text-gray-100" : "text-slate-900"
+            } text-xl font-semibold flex items-center gap-2`}
+          >
+            <Info
+              size={20}
+              className={theme === "dark" ? "text-red-500" : "text-blue-600"}
+            />{" "}
+            ข้อมูลตู้ไปรษณีย์และจุดติดตั้ง
           </h2>
 
-          {/* --- ส่วน Filter Controls และ ปุ่ม Add --- */}
           <div className="flex flex-col xl:flex-row justify-between items-center gap-4">
-            {/* ส่วน Filter Controls */}
             <div className="w-full flex-grow flex flex-col sm:flex-row gap-2">
               <div className="relative flex-grow">
                 <Search
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"
                   size={18}
                 />
                 <input
@@ -1046,14 +1257,22 @@ export default function MailboxApp() {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   disabled={showOnlyOverdue}
-                  className="w-full pl-10 pr-4 py-2 bg-white border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition shadow-sm disabled:bg-slate-50 disabled:cursor-not-allowed"
+                  className={`w-full pl-10 pr-4 py-2 border rounded-md transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed ${
+                    theme === "dark"
+                      ? "bg-gray-700 border-gray-600 text-gray-100 focus:ring-red-600 focus:border-red-600"
+                      : "bg-white border-slate-300 text-slate-900 focus:ring-blue-500 focus:border-blue-500"
+                  }`}
                 />
               </div>
               <select
                 value={jurisdictionFilter}
                 onChange={(e) => setJurisdictionFilter(e.target.value)}
                 disabled={showOnlyOverdue}
-                className="w-full sm:w-1/3 xl:w-auto p-2 border border-slate-300 rounded-md bg-white focus:ring-2 focus:ring-sky-500 shadow-sm disabled:bg-slate-50 disabled:cursor-not-allowed"
+                className={`w-full sm:w-1/3 xl:w-auto p-2 border rounded-md shadow-sm disabled:opacity-50 disabled:cursor-not-allowed ${
+                  theme === "dark"
+                    ? "bg-gray-700 border-gray-600 text-gray-100 focus:ring-red-600"
+                    : "bg-white border-slate-300 text-slate-900 focus:ring-blue-500"
+                }`}
               >
                 <option value="">ทุกสังกัด</option>{" "}
                 {JURISDICTIONS.map((j) => (
@@ -1070,7 +1289,11 @@ export default function MailboxApp() {
                   value={postOfficeFilter}
                   onChange={(e) => setPostOfficeFilter(e.target.value)}
                   disabled={showOnlyOverdue}
-                  className="w-full p-2 pr-8 border border-slate-300 rounded-md bg-white focus:ring-2 focus:ring-sky-500 shadow-sm disabled:bg-slate-50 disabled:cursor-not-allowed"
+                  className={`w-full p-2 pr-8 border rounded-md shadow-sm disabled:opacity-50 disabled:cursor-not-allowed ${
+                    theme === "dark"
+                      ? "bg-gray-700 border-gray-600 text-gray-100 focus:ring-red-600"
+                      : "bg-white border-slate-300 text-slate-900 focus:ring-blue-500"
+                  }`}
                 />
                 <datalist id="post-offices-list">
                   {POST_OFFICES.map((po) => (
@@ -1080,7 +1303,7 @@ export default function MailboxApp() {
                 {postOfficeFilter && !showOnlyOverdue && (
                   <button
                     onClick={() => setPostOfficeFilter("")}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-500 hover:text-gray-300"
                   >
                     <X size={16} />
                   </button>
@@ -1089,7 +1312,7 @@ export default function MailboxApp() {
               {showOnlyOverdue && (
                 <button
                   onClick={() => setShowOnlyOverdue(false)}
-                  className="w-full sm:w-auto flex-shrink-0 flex items-center justify-center gap-2 bg-red-100 text-red-700 font-semibold px-4 py-2 rounded-md hover:bg-red-200 transition-colors shadow-sm"
+                  className="w-full sm:w-auto flex-shrink-0 flex items-center justify-center gap-2 bg-red-900/50 text-red-400 font-semibold px-4 py-2 rounded-md hover:bg-red-900 transition-colors shadow-sm"
                   title="ล้างตัวกรองตู้ที่ไม่ได้ทำความสะอาดเกิน 90 วัน"
                 >
                   <X size={16} />
@@ -1097,32 +1320,44 @@ export default function MailboxApp() {
                 </button>
               )}
             </div>
-            {/* ปุ่ม Add (แสดงตลอด) */}
             <button
               onClick={() => openFormModal("add")}
-              className="w-full xl:w-auto flex-shrink-0 flex items-center justify-center gap-2 bg-sky-600 text-white font-semibold px-5 py-2 rounded-md hover:bg-sky-700 transition-all duration-300 shadow-md hover:shadow-lg"
+              className={`w-full xl:w-auto flex-shrink-0 flex items-center justify-center gap-2 text-white font-semibold px-5 py-2 rounded-md transition-all duration-300 shadow-md hover:shadow-lg ${
+                theme === "dark"
+                  ? "bg-red-600 hover:bg-red-700"
+                  : "bg-blue-600 hover:bg-blue-700"
+              }`}
             >
               <PlusCircle size={16} />
               เพิ่มข้อมูล
             </button>
           </div>
 
-          {/* --- ส่วนตารางและแผนที่ --- */}
           <div className="flex flex-col lg:flex-row gap-6 pt-4">
-            {" "}
-            {/* เพิ่ม pt-4 เพื่อเว้นระยะห่าง */}
-            {/* ตาราง (เหมือนเดิม) */}
             <div className="lg:w-3/5 w-full flex flex-col">
-              {/* เพิ่ม bg-white, shadow etc. ถ้าต้องการให้ตารางมีกล่องของตัวเอง */}
-              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden flex-grow flex flex-col">
+              <div
+                className={`${
+                  theme === "dark"
+                    ? "bg-gray-800 border-gray-700"
+                    : "bg-white border-slate-200"
+                } rounded-xl border overflow-hidden flex-grow flex flex-col shadow-sm`}
+              >
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-slate-100">
+                    <thead
+                      className={
+                        theme === "dark" ? "bg-gray-700" : "bg-slate-100"
+                      }
+                    >
                       <tr>
                         <th className="px-4 py-3 w-4">
                           <input
                             type="checkbox"
-                            className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+                            className={`h-4 w-4 rounded border ${
+                              theme === "dark"
+                                ? "border-gray-600 text-red-600 bg-gray-600 focus:ring-red-500"
+                                : "border-slate-300 text-blue-600 bg-slate-100 focus:ring-blue-500"
+                            }`}
                             checked={
                               filteredMailboxes.length > 0 &&
                               selectedMapMailboxes.length ===
@@ -1134,7 +1369,11 @@ export default function MailboxApp() {
                           />
                         </th>
                         <th
-                          className="px-4 py-3 text-left font-semibold text-slate-700 cursor-pointer hover:bg-slate-200 transition-colors"
+                          className={`px-4 py-3 text-left font-semibold cursor-pointer transition-colors ${
+                            theme === "dark"
+                              ? "text-gray-200 hover:bg-gray-600"
+                              : "text-slate-700 hover:bg-slate-200"
+                          }`}
                           onClick={() => handleSort("postOffice")}
                         >
                           <div className="flex items-center">
@@ -1143,7 +1382,11 @@ export default function MailboxApp() {
                           </div>
                         </th>
                         <th
-                          className="px-4 py-3 text-left font-semibold text-slate-700 cursor-pointer hover:bg-slate-200 transition-colors"
+                          className={`px-4 py-3 text-left font-semibold cursor-pointer transition-colors ${
+                            theme === "dark"
+                              ? "text-gray-200 hover:bg-gray-600"
+                              : "text-slate-700 hover:bg-slate-200"
+                          }`}
                           onClick={() => handleSort("landmark")}
                         >
                           <div className="flex items-center">
@@ -1152,7 +1395,11 @@ export default function MailboxApp() {
                           </div>
                         </th>
                         <th
-                          className="px-4 py-3 text-left font-semibold text-slate-700 cursor-pointer hover:bg-slate-200 transition-colors"
+                          className={`px-4 py-3 text-left font-semibold cursor-pointer transition-colors ${
+                            theme === "dark"
+                              ? "text-gray-200 hover:bg-gray-600"
+                              : "text-slate-700 hover:bg-slate-200"
+                          }`}
                           onClick={() => handleSort("jurisdiction")}
                         >
                           <div className="flex items-center">
@@ -1161,7 +1408,11 @@ export default function MailboxApp() {
                           </div>
                         </th>
                         <th
-                          className="px-4 py-3 text-left font-semibold text-slate-700 cursor-pointer hover:bg-slate-200 transition-colors"
+                          className={`px-4 py-3 text-left font-semibold cursor-pointer transition-colors ${
+                            theme === "dark"
+                              ? "text-gray-200 hover:bg-gray-600"
+                              : "text-slate-700 hover:bg-slate-200"
+                          }`}
                           onClick={() => handleSort("latestCleaningDate")}
                         >
                           <div className="flex items-center">
@@ -1169,24 +1420,44 @@ export default function MailboxApp() {
                             <SortIcon forColumn="latestCleaningDate" />
                           </div>
                         </th>
-                        <th className="px-4 py-3 text-center font-semibold text-slate-700">
+                        <th
+                          className={`px-4 py-3 text-center font-semibold ${
+                            theme === "dark"
+                              ? "text-gray-200"
+                              : "text-slate-700"
+                          }`}
+                        >
                           จัดการ
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-200">
+                    <tbody
+                      className={
+                        theme === "dark"
+                          ? "divide-y divide-gray-700"
+                          : "divide-y divide-slate-200"
+                      }
+                    >
                       {paginatedMailboxes.map((mailbox) => {
                         const latestCleaningDate =
                           mailbox.cleaningHistory[0]?.date;
                         return (
                           <tr
                             key={mailbox.id}
-                            className="hover:bg-sky-50 transition-colors"
+                            className={`${
+                              theme === "dark"
+                                ? "hover:bg-gray-700"
+                                : "hover:bg-slate-50"
+                            } transition-colors`}
                           >
                             <td className="px-4 py-3">
                               <input
                                 type="checkbox"
-                                className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+                                className={`h-4 w-4 rounded border ${
+                                  theme === "dark"
+                                    ? "border-gray-600 text-red-600 bg-gray-600 focus:ring-red-500"
+                                    : "border-slate-300 text-blue-600 bg-slate-100 focus:ring-blue-500"
+                                }`}
                                 checked={selectedMapMailboxes.some(
                                   (item) => item.id === mailbox.id
                                 )}
@@ -1198,19 +1469,45 @@ export default function MailboxApp() {
                                 }
                               />
                             </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-slate-800 font-medium">
+                            <td
+                              className={`px-4 py-3 whitespace-nowrap font-medium ${
+                                theme === "dark"
+                                  ? "text-gray-100"
+                                  : "text-slate-800"
+                              }`}
+                            >
                               {mailbox.postOffice}
                             </td>
-                            <td className="px-4 py-3 text-slate-500 min-w-[200px]">
+                            <td
+                              className={`px-4 py-3 min-w-[200px] ${
+                                theme === "dark"
+                                  ? "text-gray-300"
+                                  : "text-slate-500"
+                              }`}
+                            >
                               {mailbox.landmark}
                             </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-slate-500">
+                            <td
+                              className={`px-4 py-3 whitespace-nowrap ${
+                                theme === "dark"
+                                  ? "text-gray-300"
+                                  : "text-slate-500"
+                              }`}
+                            >
                               {mailbox.jurisdiction}
                             </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-slate-500">
+                            <td
+                              className={`px-4 py-3 whitespace-nowrap ${
+                                theme === "dark"
+                                  ? "text-gray-300"
+                                  : "text-slate-500"
+                              }`}
+                            >
+                              {/* --- 💡💡💡 FIX HERE: Passed theme to function 💡💡💡 --- */}
                               <span
                                 className={`px-2 py-1 rounded-full text-xs font-medium ${getDateHighlightClass(
-                                  latestCleaningDate
+                                  latestCleaningDate,
+                                  theme // Pass theme here
                                 )}`}
                               >
                                 {latestCleaningDate
@@ -1222,21 +1519,33 @@ export default function MailboxApp() {
                               <div className="flex justify-center items-center gap-1">
                                 <button
                                   onClick={() => openDetailModal(mailbox)}
-                                  className="p-2 text-slate-500 hover:bg-slate-100 hover:text-sky-600 rounded-full transition-colors"
+                                  className={`p-2 rounded-full transition-colors ${
+                                    theme === "dark"
+                                      ? "text-gray-300 hover:bg-gray-700 hover:text-red-400"
+                                      : "text-slate-500 hover:bg-slate-100 hover:text-blue-600"
+                                  }`}
                                   title="ดูรายละเอียด"
                                 >
                                   <Eye size={16} />
                                 </button>
                                 <button
                                   onClick={() => openFormModal("edit", mailbox)}
-                                  className="p-2 text-slate-500 hover:bg-slate-100 hover:text-sky-600 rounded-full transition-colors"
+                                  className={`p-2 rounded-full transition-colors ${
+                                    theme === "dark"
+                                      ? "text-gray-300 hover:bg-gray-700 hover:text-red-400"
+                                      : "text-slate-500 hover:bg-slate-100 hover:text-blue-600"
+                                  }`}
                                   title="แก้ไขข้อมูล"
                                 >
                                   <Pencil size={16} />
                                 </button>
                                 <button
                                   onClick={() => openReportModal(mailbox.id)}
-                                  className="p-2 text-slate-500 hover:bg-slate-100 hover:text-sky-600 rounded-full transition-colors"
+                                  className={`p-2 rounded-full transition-colors ${
+                                    theme === "dark"
+                                      ? "text-gray-300 hover:bg-gray-700 hover:text-red-400"
+                                      : "text-slate-500 hover:bg-slate-100 hover:text-blue-600"
+                                  }`}
                                   title="รายงานผลการทำความสะอาด"
                                 >
                                   <Camera size={16} />
@@ -1250,22 +1559,50 @@ export default function MailboxApp() {
                   </table>
                 </div>
                 {totalPages > 0 && (
-                  <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50 px-4 py-3 mt-auto">
+                  <div
+                    className={`flex items-center justify-between border-t px-4 py-3 mt-auto ${
+                      theme === "dark"
+                        ? "border-gray-700 bg-gray-700/50"
+                        : "border-slate-200 bg-slate-50"
+                    }`}
+                  >
                     <div>
-                      <p className="text-sm text-slate-500">
+                      <p
+                        className={`text-sm ${
+                          theme === "dark" ? "text-gray-300" : "text-slate-500"
+                        }`}
+                      >
                         แสดง{" "}
-                        <span className="font-semibold text-slate-700">
+                        <span
+                          className={`font-semibold ${
+                            theme === "dark"
+                              ? "text-gray-100"
+                              : "text-slate-700"
+                          }`}
+                        >
                           {(currentPage - 1) * ITEMS_PER_PAGE + 1}
                         </span>
                         -
-                        <span className="font-semibold text-slate-700">
+                        <span
+                          className={`font-semibold ${
+                            theme === "dark"
+                              ? "text-gray-100"
+                              : "text-slate-700"
+                          }`}
+                        >
                           {Math.min(
                             currentPage * ITEMS_PER_PAGE,
                             filteredMailboxes.length
                           )}
                         </span>{" "}
                         จาก{" "}
-                        <span className="font-semibold text-slate-700">
+                        <span
+                          className={`font-semibold ${
+                            theme === "dark"
+                              ? "text-gray-100"
+                              : "text-slate-700"
+                          }`}
+                        >
                           {filteredMailboxes.length}
                         </span>
                       </p>
@@ -1277,7 +1614,11 @@ export default function MailboxApp() {
                             setCurrentPage((p) => Math.max(1, p - 1))
                           }
                           disabled={currentPage === 1}
-                          className="relative inline-flex items-center rounded-l-md px-2 py-2 text-slate-400 hover:bg-slate-100 disabled:opacity-50"
+                          className={`relative inline-flex items-center rounded-l-md px-2 py-2 disabled:opacity-50 ${
+                            theme === "dark"
+                              ? "text-gray-400 hover:bg-gray-600"
+                              : "text-slate-400 hover:bg-slate-100"
+                          }`}
                         >
                           <ChevronLeft className="h-5 w-5" />
                         </button>
@@ -1302,7 +1643,11 @@ export default function MailboxApp() {
                                 onClick={() => setCurrentPage(page)}
                                 className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
                                   currentPage === page
-                                    ? "z-10 bg-sky-100 border-sky-500 text-sky-600"
+                                    ? theme === "dark"
+                                      ? "z-10 bg-red-900/50 border-red-500 text-red-400"
+                                      : "z-10 bg-blue-100 border-blue-500 text-blue-600"
+                                    : theme === "dark"
+                                    ? "text-gray-200 hover:bg-gray-600"
                                     : "text-slate-700 hover:bg-slate-100"
                                 }`}
                               >
@@ -1316,7 +1661,11 @@ export default function MailboxApp() {
                             setCurrentPage((p) => Math.min(totalPages, p + 1))
                           }
                           disabled={currentPage === totalPages}
-                          className="relative inline-flex items-center rounded-r-md px-2 py-2 text-slate-400 hover:bg-slate-100 disabled:opacity-50"
+                          className={`relative inline-flex items-center rounded-r-md px-2 py-2 disabled:opacity-50 ${
+                            theme === "dark"
+                              ? "text-gray-400 hover:bg-gray-600"
+                              : "text-slate-400 hover:bg-slate-100"
+                          }`}
                         >
                           <ChevronRight className="h-5 w-5" />
                         </button>
@@ -1325,11 +1674,16 @@ export default function MailboxApp() {
                   </div>
                 )}
                 {filteredMailboxes.length === 0 && (
-                  <p className="text-center text-slate-500 p-12">ไม่พบข้อมูล</p>
+                  <p
+                    className={`text-center p-12 ${
+                      theme === "dark" ? "text-gray-300" : "text-slate-500"
+                    }`}
+                  >
+                    ไม่พบข้อมูล
+                  </p>
                 )}
               </div>
             </div>
-            {/* แผนที่ (เหมือนเดิม) */}
             <div
               className={`lg:w-2/5 w-full relative transition-all duration-300 ${
                 isFormModalOpen || isDetailModalOpen || isReportModalOpen
@@ -1337,22 +1691,34 @@ export default function MailboxApp() {
                   : "z-10"
               }`}
             >
-              {/* เพิ่ม bg-white, shadow etc. ถ้าต้องการให้แผนที่มีกล่องของตัวเอง */}
-              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden p-4 space-y-4 h-full">
-                <h2 className="text-lg font-semibold text-slate-900">
+              <div
+                className={`${
+                  theme === "dark"
+                    ? "bg-gray-800 border-gray-700"
+                    : "bg-white border-slate-200"
+                } rounded-xl border overflow-hidden p-4 space-y-4 h-full shadow-sm`}
+              >
+                <h2
+                  className={`text-lg font-semibold ${
+                    theme === "dark" ? "text-gray-100" : "text-slate-900"
+                  }`}
+                >
                   แผนที่แสดงผล ({selectedMapMailboxes.length} รายการ)
                 </h2>
-                <div className="w-full h-full min-h-[500px] rounded-lg overflow-hidden shadow-inner bg-slate-100">
+                <div
+                  className={`w-full h-full min-h-[500px] rounded-lg overflow-hidden shadow-inner ${
+                    theme === "dark" ? "bg-gray-700" : "bg-slate-100"
+                  }`}
+                >
                   <MailboxMap mailboxes={selectedMapMailboxes} />
                 </div>
               </div>
             </div>
           </div>
         </div>
-        {/* จบกล่อง "ข้อมูลทั่วไป" */}
 
-        {/* --- ส่วน Dashboard --- */}
         <Dashboard
+          theme={theme}
           mailboxes={mailboxes}
           jurisdictions={JURISDICTIONS}
           onShowOverdueClick={handleShowOverdueClick}
@@ -1361,7 +1727,13 @@ export default function MailboxApp() {
       </main>
 
       <footer className="mt-auto">
-        <div className="container mx-auto px-4 sm:px-6 py-6 flex justify-between items-center text-sm text-slate-500 border-t border-slate-200">
+        <div
+          className={`container mx-auto px-4 sm:px-6 py-6 flex justify-between items-center text-sm border-t ${
+            theme === "dark"
+              ? "text-gray-300 border-gray-700"
+              : "text-slate-500 border-slate-200"
+          }`}
+        >
           <p className="flex items-center justify-center gap-1.5">
             Made with <span className="text-red-500">❤️</span> by Megamind
           </p>
@@ -1369,7 +1741,9 @@ export default function MailboxApp() {
             href="https://github.com/game1095/"
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-sky-600 transition-colors"
+            className={`transition-colors ${
+              theme === "dark" ? "hover:text-red-400" : "hover:text-blue-600"
+            }`}
             aria-label="GitHub Repository"
           >
             <Github size={20} />
@@ -1377,19 +1751,43 @@ export default function MailboxApp() {
         </div>
       </footer>
 
-      {/* --- Modals (Collapsed JSX) --- */}
+      {/* --- Modals --- */}
+      {/* ... (Modal code remains the same, styles inside will follow theme) ... */}
+      {/* Form Modal */}
       {isFormModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col transform transition-all animate-scale-in">
-            <div className="flex justify-between items-center px-6 py-5 border-b border-slate-200">
-              <h2 className="text-xl font-semibold text-slate-800">
+        <div
+          className={`fixed inset-0 flex justify-center items-center z-50 p-4 ${
+            theme === "dark"
+              ? "bg-black/60 backdrop-blur-md"
+              : "bg-slate-900/50 backdrop-blur-sm"
+          }`}
+        >
+          <div
+            className={`${
+              theme === "dark" ? "bg-gray-800" : "bg-white"
+            } rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col transform transition-all animate-scale-in`}
+          >
+            <div
+              className={`flex justify-between items-center px-6 py-5 border-b ${
+                theme === "dark" ? "border-gray-700" : "border-slate-200"
+              }`}
+            >
+              <h2
+                className={`text-xl font-semibold ${
+                  theme === "dark" ? "text-gray-100" : "text-slate-900"
+                }`}
+              >
                 {formMode === "add"
                   ? "เพิ่มข้อมูลตู้ไปรษณีย์"
                   : "แก้ไขข้อมูลตู้ไปรษณีย์"}
               </h2>
               <button
                 onClick={closeFormModal}
-                className="p-1 rounded-full text-slate-400 hover:bg-slate-200"
+                className={`p-1 rounded-full ${
+                  theme === "dark"
+                    ? "text-gray-300 hover:bg-gray-700"
+                    : "text-slate-400 hover:bg-slate-100"
+                }`}
               >
                 <X size={20} />
               </button>
@@ -1400,7 +1798,11 @@ export default function MailboxApp() {
             >
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                  <label
+                    className={`block text-sm font-medium mb-1 ${
+                      theme === "dark" ? "text-gray-200" : "text-slate-700"
+                    }`}
+                  >
                     ที่ทำการไปรษณีย์
                   </label>
                   <input
@@ -1409,7 +1811,11 @@ export default function MailboxApp() {
                     list="form-post-offices-list"
                     value={currentFormData.postOffice}
                     onChange={handleFormInputChange}
-                    className="w-full p-2 border border-slate-300 rounded-md shadow-sm"
+                    className={`w-full p-2 border rounded-md shadow-sm ${
+                      theme === "dark"
+                        ? "bg-gray-700 border-gray-600 text-gray-100 focus:ring-red-600"
+                        : "bg-white border-slate-300 text-slate-900 focus:ring-blue-500"
+                    }`}
                     required
                   />
                   <datalist id="form-post-offices-list">
@@ -1419,7 +1825,11 @@ export default function MailboxApp() {
                   </datalist>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                  <label
+                    className={`block text-sm font-medium mb-1 ${
+                      theme === "dark" ? "text-gray-200" : "text-slate-700"
+                    }`}
+                  >
                     รหัสไปรษณีย์
                   </label>
                   <input
@@ -1429,20 +1839,32 @@ export default function MailboxApp() {
                     onChange={handleFormInputChange}
                     maxLength={5}
                     placeholder="5 หลัก"
-                    className="w-full p-2 border border-slate-300 rounded-md shadow-sm"
+                    className={`w-full p-2 border rounded-md shadow-sm ${
+                      theme === "dark"
+                        ? "bg-gray-700 border-gray-600 text-gray-100 focus:ring-red-600"
+                        : "bg-white border-slate-300 text-slate-900 focus:ring-blue-500"
+                    }`}
                     required
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label
+                  className={`block text-sm font-medium mb-1 ${
+                    theme === "dark" ? "text-gray-200" : "text-slate-700"
+                  }`}
+                >
                   สังกัด
                 </label>
                 <select
                   name="jurisdiction"
                   value={currentFormData.jurisdiction}
                   onChange={handleFormInputChange}
-                  className="w-full p-2 border border-slate-300 rounded-md shadow-sm"
+                  className={`w-full p-2 border rounded-md shadow-sm ${
+                    theme === "dark"
+                      ? "bg-gray-700 border-gray-600 text-gray-100 focus:ring-red-600"
+                      : "bg-white border-slate-300 text-slate-900 focus:ring-blue-500"
+                  }`}
                   required
                 >
                   <option value="">-- เลือก --</option>{" "}
@@ -1454,14 +1876,22 @@ export default function MailboxApp() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label
+                  className={`block text-sm font-medium mb-1 ${
+                    theme === "dark" ? "text-gray-200" : "text-slate-700"
+                  }`}
+                >
                   ประเภทตู้
                 </label>
                 <select
                   name="mailboxType"
                   value={currentFormData.mailboxType}
                   onChange={handleFormInputChange}
-                  className="w-full p-2 border border-slate-300 rounded-md shadow-sm"
+                  className={`w-full p-2 border rounded-md shadow-sm ${
+                    theme === "dark"
+                      ? "bg-gray-700 border-gray-600 text-gray-100 focus:ring-red-600"
+                      : "bg-white border-slate-300 text-slate-900 focus:ring-blue-500"
+                  }`}
                   required
                 >
                   <option value="">-- เลือก --</option>{" "}
@@ -1473,7 +1903,11 @@ export default function MailboxApp() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label
+                  className={`block text-sm font-medium mb-1 ${
+                    theme === "dark" ? "text-gray-200" : "text-slate-700"
+                  }`}
+                >
                   จุดสังเกตที่ตั้ง
                 </label>
                 <textarea
@@ -1481,19 +1915,31 @@ export default function MailboxApp() {
                   value={currentFormData.landmark}
                   onChange={handleFormInputChange}
                   rows={3}
-                  className="w-full p-2 border border-slate-300 rounded-md shadow-sm"
+                  className={`w-full p-2 border rounded-md shadow-sm ${
+                    theme === "dark"
+                      ? "bg-gray-700 border-gray-600 text-gray-100 focus:ring-red-600"
+                      : "bg-white border-slate-300 text-slate-900 focus:ring-blue-500"
+                  }`}
                   required
                 ></textarea>
               </div>
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <label className="block text-sm font-medium text-slate-700">
+                  <label
+                    className={`block text-sm font-medium ${
+                      theme === "dark" ? "text-gray-200" : "text-slate-700"
+                    }`}
+                  >
                     จุดพิกัด
                   </label>
                   <button
                     type="button"
                     onClick={() => getCurrentLocation()}
-                    className="flex items-center gap-1.5 text-xs bg-sky-100 text-sky-700 font-semibold px-3 py-1.5 rounded-md hover:bg-sky-200 transition-colors border border-sky-200 shadow-sm"
+                    className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md transition-colors border shadow-sm ${
+                      theme === "dark"
+                        ? "bg-red-900/50 text-red-300 border-red-800 hover:bg-red-900"
+                        : "bg-blue-100 text-blue-700 border-blue-300 hover:bg-blue-200"
+                    }`}
                   >
                     <LocateFixed size={14} /> ใช้ตำแหน่งปัจจุบัน
                   </button>
@@ -1506,7 +1952,11 @@ export default function MailboxApp() {
                     value={currentFormData.lat}
                     onChange={handleFormInputChange}
                     placeholder="ละติจูด"
-                    className="w-full p-2 border border-slate-300 rounded-md shadow-sm font-mono text-sm"
+                    className={`w-full p-2 border rounded-md shadow-sm font-mono text-sm ${
+                      theme === "dark"
+                        ? "bg-gray-700 border-gray-600 text-gray-100 focus:ring-red-600"
+                        : "bg-white border-slate-300 text-slate-900 focus:ring-blue-500"
+                    }`}
                     required
                   />
                   <input
@@ -1516,11 +1966,19 @@ export default function MailboxApp() {
                     value={currentFormData.lng}
                     onChange={handleFormInputChange}
                     placeholder="ลองจิจูด"
-                    className="w-full p-2 border border-slate-300 rounded-md shadow-sm font-mono text-sm"
+                    className={`w-full p-2 border rounded-md shadow-sm font-mono text-sm ${
+                      theme === "dark"
+                        ? "bg-gray-700 border-gray-600 text-gray-100 focus:ring-red-600"
+                        : "bg-white border-slate-300 text-slate-900 focus:ring-blue-500"
+                    }`}
                     required
                   />
                 </div>
-                <p className="text-xs text-slate-500 mb-1">
+                <p
+                  className={`text-xs mb-1 ${
+                    theme === "dark" ? "text-gray-300" : "text-slate-500"
+                  }`}
+                >
                   หรือ คลิก/ลากหมุดบนแผนที่:
                 </p>
                 <FormMapPicker
@@ -1530,22 +1988,40 @@ export default function MailboxApp() {
                   mapRef={formMapRef}
                 />
                 {locationStatus && (
-                  <p className="text-xs text-slate-500 mt-2">
+                  <p
+                    className={`text-xs mt-2 ${
+                      theme === "dark" ? "text-gray-300" : "text-slate-500"
+                    }`}
+                  >
                     {locationStatus}
                   </p>
                 )}
               </div>
-              <div className="flex justify-end gap-3 p-4 bg-slate-50 -m-6 mt-6 rounded-b-xl border-t border-slate-200">
+              <div
+                className={`flex justify-end gap-3 p-4 -m-6 mt-6 rounded-b-xl border-t ${
+                  theme === "dark"
+                    ? "bg-gray-700/50 border-gray-700"
+                    : "bg-slate-50 border-slate-200"
+                }`}
+              >
                 <button
                   type="button"
                   onClick={closeFormModal}
-                  className="px-5 py-2 bg-white text-slate-700 font-semibold rounded-md hover:bg-slate-100 transition-colors border border-slate-300 shadow-sm"
+                  className={`px-5 py-2 font-semibold rounded-md transition-colors border shadow-sm ${
+                    theme === "dark"
+                      ? "bg-gray-600 text-gray-100 border-gray-500 hover:bg-gray-500"
+                      : "bg-white text-slate-700 border-slate-300 hover:bg-slate-100"
+                  }`}
                 >
                   ยกเลิก
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-sky-600 text-white font-semibold rounded-md hover:bg-sky-700 transition-colors shadow-md hover:shadow-lg"
+                  className={`px-5 py-2 text-white font-semibold rounded-md transition-colors shadow-md hover:shadow-lg ${
+                    theme === "dark"
+                      ? "bg-red-600 hover:bg-red-700"
+                      : "bg-blue-600 hover:bg-blue-700"
+                  }`}
                 >
                   บันทึก
                 </button>
@@ -1554,16 +2030,39 @@ export default function MailboxApp() {
           </div>
         </div>
       )}
+      {/* Detail Modal */}
       {isDetailModalOpen && selectedMailbox && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-5xl max-h-[90vh] flex flex-col transform transition-all animate-scale-in">
-            <div className="flex justify-between items-center px-6 py-5 border-b border-slate-200">
-              <h2 className="text-xl font-semibold text-slate-800">
+        <div
+          className={`fixed inset-0 flex justify-center items-center z-50 p-4 ${
+            theme === "dark"
+              ? "bg-black/60 backdrop-blur-md"
+              : "bg-slate-900/50 backdrop-blur-sm"
+          }`}
+        >
+          <div
+            className={`${
+              theme === "dark" ? "bg-gray-800" : "bg-white"
+            } rounded-xl shadow-xl w-full max-w-5xl max-h-[90vh] flex flex-col transform transition-all animate-scale-in`}
+          >
+            <div
+              className={`flex justify-between items-center px-6 py-5 border-b ${
+                theme === "dark" ? "border-gray-700" : "border-slate-200"
+              }`}
+            >
+              <h2
+                className={`text-xl font-semibold ${
+                  theme === "dark" ? "text-gray-100" : "text-slate-900"
+                }`}
+              >
                 รายละเอียดตู้ไปรษณีย์
               </h2>
               <button
                 onClick={closeDetailModal}
-                className="p-1 rounded-full text-slate-400 hover:bg-slate-200"
+                className={`p-1 rounded-full ${
+                  theme === "dark"
+                    ? "text-gray-300 hover:bg-gray-700"
+                    : "text-slate-400 hover:bg-slate-100"
+                }`}
               >
                 <X size={20} />
               </button>
@@ -1572,52 +2071,102 @@ export default function MailboxApp() {
               <div className="grid lg:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-500">
+                    <h3
+                      className={`text-sm font-semibold ${
+                        theme === "dark" ? "text-gray-300" : "text-slate-500"
+                      }`}
+                    >
                       ที่ทำการไปรษณีย์
                     </h3>
-                    <p className="text-base text-slate-900">
+                    <p
+                      className={`text-base ${
+                        theme === "dark" ? "text-gray-100" : "text-slate-900"
+                      }`}
+                    >
                       {selectedMailbox.postOffice} ({selectedMailbox.postalCode}
                       )
                     </p>
                   </div>
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-500">
+                    <h3
+                      className={`text-sm font-semibold ${
+                        theme === "dark" ? "text-gray-300" : "text-slate-500"
+                      }`}
+                    >
                       สังกัด
                     </h3>
-                    <p className="text-base text-slate-900">
+                    <p
+                      className={`text-base ${
+                        theme === "dark" ? "text-gray-100" : "text-slate-900"
+                      }`}
+                    >
                       {selectedMailbox.jurisdiction}
                     </p>
                   </div>
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-500">
+                    <h3
+                      className={`text-sm font-semibold ${
+                        theme === "dark" ? "text-gray-300" : "text-slate-500"
+                      }`}
+                    >
                       ประเภทตู้
                     </h3>
-                    <p className="text-base text-slate-900">
+                    <p
+                      className={`text-base ${
+                        theme === "dark" ? "text-gray-100" : "text-slate-900"
+                      }`}
+                    >
                       {selectedMailbox.mailboxType}
                     </p>
                   </div>
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-500">
+                    <h3
+                      className={`text-sm font-semibold ${
+                        theme === "dark" ? "text-gray-300" : "text-slate-500"
+                      }`}
+                    >
                       จุดสังเกต
                     </h3>
-                    <p className="text-base text-slate-900">
+                    <p
+                      className={`text-base ${
+                        theme === "dark" ? "text-gray-100" : "text-slate-900"
+                      }`}
+                    >
                       {selectedMailbox.landmark}
                     </p>
                   </div>
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-500">
+                    <h3
+                      className={`text-sm font-semibold ${
+                        theme === "dark" ? "text-gray-300" : "text-slate-500"
+                      }`}
+                    >
                       พิกัด
                     </h3>
-                    <p className="text-base text-slate-900 font-mono">
+                    <p
+                      className={`text-base font-mono ${
+                        theme === "dark" ? "text-gray-100" : "text-slate-900"
+                      }`}
+                    >
                       {selectedMailbox.lat}, {selectedMailbox.lng}
                     </p>
                   </div>
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-500 mb-2">
+                  <h3
+                    className={`text-sm font-semibold mb-2 ${
+                      theme === "dark" ? "text-gray-300" : "text-slate-500"
+                    }`}
+                  >
                     ตำแหน่งบนแผนที่
                   </h3>
-                  <div className="w-full h-96 rounded-lg overflow-hidden border border-slate-200 shadow-inner bg-slate-100">
+                  <div
+                    className={`w-full h-96 rounded-lg overflow-hidden border shadow-inner ${
+                      theme === "dark"
+                        ? "border-gray-700 bg-gray-700"
+                        : "border-slate-200 bg-slate-100"
+                    }`}
+                  >
                     <iframe
                       width="100%"
                       height="100%"
@@ -1628,45 +2177,119 @@ export default function MailboxApp() {
                   </div>
                 </div>
               </div>
-              <div className="pt-6 mt-6 border-t border-slate-200">
-                <h3 className="text-lg font-semibold text-slate-800 mb-4">
+              <div
+                className={`pt-6 mt-6 border-t ${
+                  theme === "dark" ? "border-gray-700" : "border-slate-200"
+                }`}
+              >
+                <h3
+                  className={`text-lg font-semibold mb-4 ${
+                    theme === "dark" ? "text-gray-100" : "text-slate-900"
+                  }`}
+                >
                   ประวัติการทำความสะอาด
                 </h3>
                 {selectedMailbox.cleaningHistory.length === 0 ? (
-                  <p className="text-slate-500">ยังไม่มีประวัติ</p>
+                  <p
+                    className={
+                      theme === "dark" ? "text-gray-300" : "text-slate-500"
+                    }
+                  >
+                    ยังไม่มีประวัติ
+                  </p>
                 ) : (
-                  <div className="overflow-x-auto rounded-xl border border-slate-200">
+                  <div
+                    className={`overflow-x-auto rounded-xl border shadow-sm ${
+                      theme === "dark" ? "border-gray-700" : "border-slate-200"
+                    }`}
+                  >
                     <table className="w-full text-sm">
-                      <thead className="bg-slate-100">
+                      <thead
+                        className={
+                          theme === "dark" ? "bg-gray-700" : "bg-slate-100"
+                        }
+                      >
                         <tr>
-                          <th className="px-4 py-3 text-left font-semibold text-slate-700 w-12">
+                          <th
+                            className={`px-4 py-3 text-left font-semibold w-12 ${
+                              theme === "dark"
+                                ? "text-gray-200"
+                                : "text-slate-700"
+                            }`}
+                          >
                             ลำดับ
                           </th>
-                          <th className="px-4 py-3 text-left font-semibold text-slate-700">
+                          <th
+                            className={`px-4 py-3 text-left font-semibold ${
+                              theme === "dark"
+                                ? "text-gray-200"
+                                : "text-slate-700"
+                            }`}
+                          >
                             วันที่
                           </th>
-                          <th className="px-4 py-3 text-center font-semibold text-slate-700">
+                          <th
+                            className={`px-4 py-3 text-center font-semibold ${
+                              theme === "dark"
+                                ? "text-gray-200"
+                                : "text-slate-700"
+                            }`}
+                          >
                             ก่อนทำ
                           </th>
-                          <th className="px-4 py-3 text-center font-semibold text-slate-700">
+                          <th
+                            className={`px-4 py-3 text-center font-semibold ${
+                              theme === "dark"
+                                ? "text-gray-200"
+                                : "text-slate-700"
+                            }`}
+                          >
                             หลังทำ
                           </th>
-                          <th className="px-4 py-3 text-left font-semibold text-slate-700">
+                          <th
+                            className={`px-4 py-3 text-left font-semibold ${
+                              theme === "dark"
+                                ? "text-gray-200"
+                                : "text-slate-700"
+                            }`}
+                          >
                             ผู้รับผิดชอบ
                           </th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-200">
+                      <tbody
+                        className={
+                          theme === "dark"
+                            ? "divide-y divide-gray-700"
+                            : "divide-y divide-slate-200"
+                        }
+                      >
                         {selectedMailbox.cleaningHistory.map(
                           (record, index) => (
                             <tr
                               key={index}
-                              className="hover:bg-sky-50 transition-colors"
+                              className={`${
+                                theme === "dark"
+                                  ? "hover:bg-gray-700/50"
+                                  : "hover:bg-slate-50"
+                              } transition-colors`}
                             >
-                              <td className="px-4 py-3 whitespace-nowrap text-slate-800 font-medium">
+                              <td
+                                className={`px-4 py-3 whitespace-nowrap font-medium ${
+                                  theme === "dark"
+                                    ? "text-gray-100"
+                                    : "text-slate-800"
+                                }`}
+                              >
                                 {index + 1}
                               </td>
-                              <td className="px-4 py-3 whitespace-nowrap text-slate-500">
+                              <td
+                                className={`px-4 py-3 whitespace-nowrap ${
+                                  theme === "dark"
+                                    ? "text-gray-200"
+                                    : "text-slate-600"
+                                }`}
+                              >
                                 {formatDateToThai(record.date)}
                               </td>
                               <td className="px-4 py-3 text-center">
@@ -1676,7 +2299,11 @@ export default function MailboxApp() {
                                     alt="Before"
                                     width={64}
                                     height={64}
-                                    className="w-16 h-16 object-cover rounded-lg cursor-pointer mx-auto border"
+                                    className={`w-16 h-16 object-cover rounded-lg cursor-pointer mx-auto border ${
+                                      theme === "dark"
+                                        ? "border-gray-600"
+                                        : "border-slate-200"
+                                    }`}
                                     onClick={() =>
                                       openImageModal(
                                         record.beforeCleanImage as string
@@ -1684,7 +2311,15 @@ export default function MailboxApp() {
                                     }
                                   />
                                 ) : (
-                                  <span className="text-slate-400">-</span>
+                                  <span
+                                    className={
+                                      theme === "dark"
+                                        ? "text-gray-500"
+                                        : "text-slate-400"
+                                    }
+                                  >
+                                    -
+                                  </span>
                                 )}
                               </td>
                               <td className="px-4 py-3 text-center">
@@ -1694,7 +2329,11 @@ export default function MailboxApp() {
                                     alt="After"
                                     width={64}
                                     height={64}
-                                    className="w-16 h-16 object-cover rounded-lg cursor-pointer mx-auto border"
+                                    className={`w-16 h-16 object-cover rounded-lg cursor-pointer mx-auto border ${
+                                      theme === "dark"
+                                        ? "border-gray-600"
+                                        : "border-slate-200"
+                                    }`}
                                     onClick={() =>
                                       openImageModal(
                                         record.afterCleanImage as string
@@ -1702,10 +2341,24 @@ export default function MailboxApp() {
                                     }
                                   />
                                 ) : (
-                                  <span className="text-slate-400">-</span>
+                                  <span
+                                    className={
+                                      theme === "dark"
+                                        ? "text-gray-500"
+                                        : "text-slate-400"
+                                    }
+                                  >
+                                    -
+                                  </span>
                                 )}
                               </td>
-                              <td className="px-4 py-3 whitespace-nowrap text-slate-500">
+                              <td
+                                className={`px-4 py-3 whitespace-nowrap ${
+                                  theme === "dark"
+                                    ? "text-gray-200"
+                                    : "text-slate-600"
+                                }`}
+                              >
                                 {record.cleanerName}
                               </td>
                             </tr>
@@ -1717,11 +2370,21 @@ export default function MailboxApp() {
                 )}
               </div>
             </div>
-            <div className="flex justify-end gap-3 p-4 bg-slate-50 rounded-b-xl border-t border-slate-200">
+            <div
+              className={`flex justify-end gap-3 p-4 rounded-b-xl border-t ${
+                theme === "dark"
+                  ? "bg-gray-700/50 border-gray-700"
+                  : "bg-slate-50 border-slate-200"
+              }`}
+            >
               <button
                 type="button"
                 onClick={closeDetailModal}
-                className="px-5 py-2 bg-white text-slate-700 font-semibold rounded-md hover:bg-slate-100 transition-colors border border-slate-300 shadow-sm"
+                className={`px-5 py-2 font-semibold rounded-md transition-colors border shadow-sm ${
+                  theme === "dark"
+                    ? "bg-gray-600 text-gray-100 border-gray-500 hover:bg-gray-500"
+                    : "bg-white text-slate-700 border-slate-300 hover:bg-slate-100"
+                }`}
               >
                 ปิด
               </button>
@@ -1729,16 +2392,39 @@ export default function MailboxApp() {
           </div>
         </div>
       )}
+      {/* Report Modal */}
       {isReportModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col transform transition-all animate-scale-in">
-            <div className="flex justify-between items-center px-6 py-5 border-b border-slate-200">
-              <h2 className="text-xl font-semibold text-slate-800">
+        <div
+          className={`fixed inset-0 flex justify-center items-center z-50 p-4 ${
+            theme === "dark"
+              ? "bg-black/60 backdrop-blur-md"
+              : "bg-slate-900/50 backdrop-blur-sm"
+          }`}
+        >
+          <div
+            className={`${
+              theme === "dark" ? "bg-gray-800" : "bg-white"
+            } rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col transform transition-all animate-scale-in`}
+          >
+            <div
+              className={`flex justify-between items-center px-6 py-5 border-b ${
+                theme === "dark" ? "border-gray-700" : "border-slate-200"
+              }`}
+            >
+              <h2
+                className={`text-xl font-semibold ${
+                  theme === "dark" ? "text-gray-100" : "text-slate-900"
+                }`}
+              >
                 รายงานผลการทำความสะอาด
               </h2>
               <button
                 onClick={closeReportModal}
-                className="p-1 rounded-full text-slate-400 hover:bg-slate-200"
+                className={`p-1 rounded-full ${
+                  theme === "dark"
+                    ? "text-gray-300 hover:bg-gray-700"
+                    : "text-slate-400 hover:bg-slate-100"
+                }`}
               >
                 <X size={20} />
               </button>
@@ -1748,32 +2434,56 @@ export default function MailboxApp() {
               className="p-6 space-y-5 overflow-y-auto"
             >
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label
+                  className={`block text-sm font-medium mb-1 ${
+                    theme === "dark" ? "text-gray-200" : "text-slate-700"
+                  }`}
+                >
                   วันที่รายงาน
                 </label>
                 <input
                   type="date"
                   value={reportDate}
                   onChange={(e) => setReportDate(e.target.value)}
-                  className="w-full p-2 border border-slate-300 rounded-md shadow-sm"
+                  className={`w-full p-2 border rounded-md shadow-sm ${
+                    theme === "dark"
+                      ? "bg-gray-700 border-gray-600 text-gray-100 focus:ring-red-600"
+                      : "bg-white border-slate-300 text-slate-900 focus:ring-blue-500"
+                  }`}
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label
+                  className={`block text-sm font-medium mb-1 ${
+                    theme === "dark" ? "text-gray-200" : "text-slate-700"
+                  }`}
+                >
                   รูปภาพก่อนทำความสะอาด
                 </label>
                 <input
                   type="file"
                   accept="image/*"
                   onChange={(e) => handleImageUpload(e, "before")}
-                  className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-sky-100 file:text-sky-700 hover:file:bg-sky-200"
+                  className={`w-full text-sm ${
+                    theme === "dark" ? "text-gray-300" : "text-slate-500"
+                  } file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold ${
+                    theme === "dark"
+                      ? "file:bg-red-900/50 file:text-red-300 hover:file:bg-red-900"
+                      : "file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200"
+                  }`}
                   required
                 />
                 {uploadProgress.before > 0 && (
-                  <div className="mt-2 w-full bg-slate-200 rounded-full h-2.5">
+                  <div
+                    className={`mt-2 w-full rounded-full h-2.5 ${
+                      theme === "dark" ? "bg-gray-700" : "bg-slate-200"
+                    }`}
+                  >
                     <div
-                      className="bg-sky-500 h-2.5 rounded-full"
+                      className={`h-2.5 rounded-full ${
+                        theme === "dark" ? "bg-red-600" : "bg-blue-600"
+                      }`}
                       style={{ width: `${uploadProgress.before}%` }}
                     ></div>
                   </div>
@@ -1784,25 +2494,43 @@ export default function MailboxApp() {
                     alt="Before Preview"
                     width={128}
                     height={128}
-                    className="mt-2 w-32 h-32 object-cover rounded-lg border"
+                    className={`mt-2 w-32 h-32 object-cover rounded-lg border ${
+                      theme === "dark" ? "border-gray-600" : "border-slate-200"
+                    }`}
                   />
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label
+                  className={`block text-sm font-medium mb-1 ${
+                    theme === "dark" ? "text-gray-200" : "text-slate-700"
+                  }`}
+                >
                   รูปภาพหลังทำความสะอาด
                 </label>
                 <input
                   type="file"
                   accept="image/*"
                   onChange={(e) => handleImageUpload(e, "after")}
-                  className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-sky-100 file:text-sky-700 hover:file:bg-sky-200"
+                  className={`w-full text-sm ${
+                    theme === "dark" ? "text-gray-300" : "text-slate-500"
+                  } file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold ${
+                    theme === "dark"
+                      ? "file:bg-red-900/50 file:text-red-300 hover:file:bg-red-900"
+                      : "file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200"
+                  }`}
                   required
                 />
                 {uploadProgress.after > 0 && (
-                  <div className="mt-2 w-full bg-slate-200 rounded-full h-2.5">
+                  <div
+                    className={`mt-2 w-full rounded-full h-2.5 ${
+                      theme === "dark" ? "bg-gray-700" : "bg-slate-200"
+                    }`}
+                  >
                     <div
-                      className="bg-sky-500 h-2.5 rounded-full"
+                      className={`h-2.5 rounded-full ${
+                        theme === "dark" ? "bg-red-600" : "bg-blue-600"
+                      }`}
                       style={{ width: `${uploadProgress.after}%` }}
                     ></div>
                   </div>
@@ -1813,34 +2541,58 @@ export default function MailboxApp() {
                     alt="After Preview"
                     width={128}
                     height={128}
-                    className="mt-2 w-32 h-32 object-cover rounded-lg border"
+                    className={`mt-2 w-32 h-32 object-cover rounded-lg border ${
+                      theme === "dark" ? "border-gray-600" : "border-slate-200"
+                    }`}
                   />
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label
+                  className={`block text-sm font-medium mb-1 ${
+                    theme === "dark" ? "text-gray-200" : "text-slate-700"
+                  }`}
+                >
                   ชื่อผู้รายงาน/ผู้ทำความสะอาด
                 </label>
                 <input
                   type="text"
                   value={reportCleanerName}
                   onChange={(e) => setReportCleanerName(e.target.value)}
-                  className="w-full p-2 border border-slate-300 rounded-md shadow-sm"
+                  className={`w-full p-2 border rounded-md shadow-sm ${
+                    theme === "dark"
+                      ? "bg-gray-700 border-gray-600 text-gray-100 focus:ring-red-600"
+                      : "bg-white border-slate-300 text-slate-900 focus:ring-blue-500"
+                  }`}
                   placeholder="เช่น ทีมงาน A, เจ้าหน้าที่ สมชาย"
                   required
                 />
               </div>
-              <div className="flex justify-end gap-3 p-4 bg-slate-50 -m-6 mt-6 rounded-b-xl border-t border-slate-200">
+              <div
+                className={`flex justify-end gap-3 p-4 -m-6 mt-6 rounded-b-xl border-t ${
+                  theme === "dark"
+                    ? "bg-gray-700/50 border-gray-700"
+                    : "bg-slate-50 border-slate-200"
+                }`}
+              >
                 <button
                   type="button"
                   onClick={closeReportModal}
-                  className="px-5 py-2 bg-white text-slate-700 font-semibold rounded-md hover:bg-slate-100 transition-colors border border-slate-300 shadow-sm"
+                  className={`px-5 py-2 font-semibold rounded-md transition-colors border shadow-sm ${
+                    theme === "dark"
+                      ? "bg-gray-600 text-gray-100 border-gray-500 hover:bg-gray-500"
+                      : "bg-white text-slate-700 border-slate-300 hover:bg-slate-100"
+                  }`}
                 >
                   ยกเลิก
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-sky-600 text-white font-semibold rounded-md hover:bg-sky-700 transition-colors shadow-md hover:shadow-lg"
+                  className={`px-5 py-2 text-white font-semibold rounded-md transition-colors shadow-md hover:shadow-lg ${
+                    theme === "dark"
+                      ? "bg-red-600 hover:bg-red-700"
+                      : "bg-blue-600 hover:bg-blue-700"
+                  }`}
                 >
                   บันทึกรายงาน
                 </button>
@@ -1849,9 +2601,10 @@ export default function MailboxApp() {
           </div>
         </div>
       )}
+      {/* Image Modal */}
       {isImageModalOpen && fullImageUrl && (
         <div
-          className="fixed inset-0 bg-slate-900/90 backdrop-blur-sm flex justify-center items-center z-[60] p-4"
+          className="fixed inset-0 bg-black/90 backdrop-blur-md flex justify-center items-center z-[60] p-4"
           onClick={closeImageModal}
         >
           <div
@@ -1867,7 +2620,7 @@ export default function MailboxApp() {
             />
             <button
               onClick={closeImageModal}
-              className="absolute -top-2 -right-2 p-2 rounded-full bg-white text-slate-800 hover:bg-slate-100 z-10 shadow-lg"
+              className="absolute -top-2 -right-2 p-2 rounded-full bg-white text-gray-800 hover:bg-gray-100 z-10 shadow-lg"
             >
               <X size={24} />
             </button>
