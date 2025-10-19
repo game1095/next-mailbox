@@ -12,7 +12,7 @@ import React, {
 import {
   PlusCircle,
   Search,
-  // MapPin, // [แก้ไข] ลบ MapPin ออก
+  // MapPin, // ไม่ได้ใช้แล้ว
   Eye,
   Pencil,
   ChevronLeft,
@@ -530,8 +530,8 @@ export default function MailboxApp() {
       jurisdiction: "",
       mailboxType: "" as MailboxType,
       landmark: "",
-      lat: "",
-      lng: "",
+      lat: "", // เริ่มต้นเป็นค่าว่าง
+      lng: "", // เริ่มต้นเป็นค่าว่าง
       cleaningHistory: [],
     }),
     []
@@ -745,24 +745,35 @@ export default function MailboxApp() {
       setUploadProgress((prev) => ({ ...prev, [imageType]: 0 }));
     }
   };
-  const getCurrentLocation = () => {
-    setLocationStatus("กำลังดึงพิกัด...");
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const lat = parseFloat(position.coords.latitude.toFixed(6));
-        const lng = parseFloat(position.coords.longitude.toFixed(6));
-        setCurrentFormData((prev) => ({
-          ...prev,
-          lat: lat,
-          lng: lng,
-        }));
-        setLocationStatus("ดึงพิกัดสำเร็จ!");
-      },
-      () => {
-        setLocationStatus("ไม่สามารถเข้าถึงตำแหน่งได้");
-      }
-    );
-  };
+
+  // [แก้ไข] ปรับ getCurrentLocation ให้รับ callback
+  const getCurrentLocation = useCallback(
+    (onSuccess?: (lat: number, lng: number) => void) => {
+      // เอา setLocationStatus ออกไปก่อน
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = parseFloat(position.coords.latitude.toFixed(6));
+          const lng = parseFloat(position.coords.longitude.toFixed(6));
+          // ถ้ามี callback ให้เรียก callback
+          if (onSuccess) {
+            onSuccess(lat, lng);
+          } else {
+            // ถ้าไม่มี (เช่น กดปุ่ม) ให้ update state โดยตรง
+            setCurrentFormData((prev) => ({
+              ...prev,
+              lat: lat,
+              lng: lng,
+            }));
+          }
+          setLocationStatus("ดึงพิกัดสำเร็จ!");
+        },
+        () => {
+          setLocationStatus("ไม่สามารถเข้าถึงตำแหน่งได้");
+        }
+      );
+    },
+    []
+  ); // เพิ่ม useCallback และ dependency ว่างเปล่า
 
   const handleMapPositionChange = useCallback((lat: number, lng: number) => {
     setCurrentFormData((prev) => ({
@@ -774,13 +785,29 @@ export default function MailboxApp() {
 
   const openFormModal = (mode: "add" | "edit", mailbox?: Mailbox) => {
     setFormMode(mode);
+    setLocationStatus(""); // เคลียร์ status ก่อนเสมอ
+
     if (mode === "edit" && mailbox) {
       setCurrentFormData(mailbox);
+      setIsFormModalOpen(true); // เปิด modal ก่อน
     } else {
-      setCurrentFormData(BLANK_MAILBOX_FORM);
+      // โหมด Add
+      setCurrentFormData(BLANK_MAILBOX_FORM); // ตั้งค่าเป็นฟอร์มเปล่าก่อน
+      setIsFormModalOpen(true); // เปิด modal
+
+      // [แก้ไข] เรียก getCurrentLocation หลังจากเปิด Modal แล้ว
+      // ใช้ setTimeout เล็กน้อยเพื่อให้ Modal แสดงผลเสร็จก่อน
+      setTimeout(() => {
+        getCurrentLocation((lat, lng) => {
+          // ใช้ callback เพื่อ update state เมื่อได้พิกัด
+          setCurrentFormData((prev) => ({
+            ...prev, // คงค่าอื่นๆ ที่อาจกรอกไปแล้ว (ถ้ามี)
+            lat: lat,
+            lng: lng,
+          }));
+        });
+      }, 100); // รอ 100ms
     }
-    setIsFormModalOpen(true);
-    setLocationStatus("");
   };
   const closeFormModal = () => setIsFormModalOpen(false);
 
@@ -1384,26 +1411,24 @@ export default function MailboxApp() {
                 ></textarea>
               </div>
 
-              {/* --- [แก้ไข] ส่วนของพิกัด --- */}
+              {/* --- ส่วนของพิกัด --- */}
               <div>
                 <div className="flex justify-between items-center mb-2">
                   <label className="block text-sm font-medium text-slate-700">
                     จุดพิกัด
                   </label>
-                  {/* [แก้ไข] ปรับปุ่มให้เด่นขึ้น */}
                   <button
                     type="button"
-                    onClick={getCurrentLocation}
+                    onClick={() => getCurrentLocation()} // [แก้ไข] เรียกแบบไม่มี callback
                     className="flex items-center gap-1.5 text-xs bg-sky-100 text-sky-700 font-semibold px-3 py-1.5 rounded-md hover:bg-sky-200 transition-colors border border-sky-200 shadow-sm"
                   >
                     <LocateFixed size={14} /> ใช้ตำแหน่งปัจจุบัน
                   </button>
                 </div>
-                {/* [เพิ่ม] ช่อง Input สำหรับกรอก Lat/Lng */}
                 <div className="grid grid-cols-2 gap-2 mb-2">
                   <input
                     type="number"
-                    step="any" // อนุญาตทศนิยม
+                    step="any"
                     name="lat"
                     value={currentFormData.lat}
                     onChange={handleFormInputChange}
@@ -1413,7 +1438,7 @@ export default function MailboxApp() {
                   />
                   <input
                     type="number"
-                    step="any" // อนุญาตทศนิยม
+                    step="any"
                     name="lng"
                     value={currentFormData.lng}
                     onChange={handleFormInputChange}
@@ -1422,7 +1447,6 @@ export default function MailboxApp() {
                     required
                   />
                 </div>
-                {/* แผนที่สำหรับเลือก */}
                 <p className="text-xs text-slate-500 mb-1">
                   หรือ คลิก/ลากหมุดบนแผนที่:
                 </p>
